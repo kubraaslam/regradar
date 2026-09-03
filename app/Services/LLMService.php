@@ -55,7 +55,7 @@ Return ONLY a valid JSON object in this exact format, no other text:
 }
 
 Risk levels: High (direct overlap with changed code), Medium (indirect dependency), Low (minor or unlikely impact). 
-Only include features that have some risk — omit features with no risk.
+Only include features that have some risk. Omit features with no risk.
 PROMPT;
 
         $response = $this->client->post('chat/completions', [

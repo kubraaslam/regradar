@@ -1,3 +1,249 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* ==========================================================================
+   Base
+   ========================================================================== */
+@layer base {
+    html {
+        color-scheme: dark;
+        scroll-behavior: smooth;
+    }
+
+    body {
+        @apply relative bg-ink-900 text-slate-300 antialiased;
+        background-image:
+            linear-gradient(rgba(148, 163, 184, .04) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(148, 163, 184, .04) 1px, transparent 1px);
+        background-size: 44px 44px;
+    }
+
+    /* Ambient glow, pinned to the viewport without background-attachment: fixed
+       (which forces a compositing layer and breaks painting on scroll). */
+    body::before {
+        content: '';
+        position: fixed;
+        inset: 0;
+        z-index: -1;
+        pointer-events: none;
+        background-image:
+            radial-gradient(900px circle at 12% -8%, rgba(13, 148, 136, .18), transparent 55%),
+            radial-gradient(760px circle at 92% 4%, rgba(244, 63, 94, .10), transparent 55%);
+    }
+
+    h1, h2, h3, h4 {
+        @apply text-slate-100 tracking-tight;
+    }
+
+    ::selection {
+        @apply bg-brand-500/30 text-white;
+    }
+
+    /* Scrollbar */
+    * {
+        scrollbar-width: thin;
+        scrollbar-color: #334155 transparent;
+    }
+
+    ::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+        @apply rounded-full border-2 border-solid border-transparent bg-ink-700 bg-clip-content;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        @apply bg-slate-600 bg-clip-content;
+    }
+
+    /* Autofill shouldn't blow a white box into the dark UI */
+    input:-webkit-autofill,
+    input:-webkit-autofill:focus {
+        -webkit-text-fill-color: #e2e8f0;
+        -webkit-box-shadow: 0 0 0 1000px #1e293b inset;
+    }
+}
+
+/* ==========================================================================
+   Components
+   ========================================================================== */
+@layer components {
+
+    /* --- Surfaces --------------------------------------------------------- */
+    .card {
+        @apply rounded-2xl border border-white/[.07] bg-ink-800/70 shadow-card backdrop-blur-sm;
+    }
+
+    .card-interactive {
+        @apply card transition duration-300 hover:-translate-y-0.5 hover:border-brand-500/40 hover:shadow-lift;
+    }
+
+    .card-pad {
+        @apply p-5 sm:p-6;
+    }
+
+    .divide-hairline > :not([hidden]) ~ :not([hidden]) {
+        @apply border-t border-white/[.06];
+    }
+
+    .hairline {
+        @apply border-white/[.07];
+    }
+
+    /* --- Buttons ---------------------------------------------------------- */
+    .btn {
+        @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold
+               transition duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500
+               focus-visible:ring-offset-2 focus-visible:ring-offset-ink-900
+               disabled:pointer-events-none disabled:opacity-50;
+    }
+
+    .btn-primary {
+        @apply btn bg-brand-gradient text-white shadow-glow-sm
+               hover:brightness-110 hover:shadow-glow active:brightness-95;
+    }
+
+    .btn-secondary {
+        @apply btn border border-white/10 bg-white/[.04] text-slate-200
+               hover:border-brand-500/40 hover:bg-white/[.08] hover:text-white;
+    }
+
+    .btn-ghost {
+        @apply btn text-slate-400 hover:bg-white/[.06] hover:text-white;
+    }
+
+    .btn-danger {
+        @apply btn bg-flare-gradient text-white shadow-glow-flare hover:brightness-110 active:brightness-95;
+    }
+
+    .btn-sm {
+        @apply px-3 py-2 text-xs;
+    }
+
+    /* --- Forms ------------------------------------------------------------ */
+    .label {
+        @apply mb-1.5 block text-sm font-medium text-slate-300;
+    }
+
+    .label-hint {
+        @apply font-normal text-slate-500;
+    }
+
+    .input {
+        @apply block w-full rounded-xl border-white/10 bg-ink-900/60 px-3.5 py-2.5 text-sm text-slate-100
+               placeholder-slate-500 shadow-inner transition
+               focus:border-brand-500 focus:bg-ink-900/80 focus:ring-2 focus:ring-brand-500/30;
+    }
+
+    textarea.input {
+        @apply leading-relaxed;
+    }
+
+    .checkbox {
+        @apply rounded border-white/20 bg-ink-900 text-brand-500 focus:ring-brand-500/40 focus:ring-offset-ink-900;
+    }
+
+    /* --- Badges & pills --------------------------------------------------- */
+    .badge {
+        @apply inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold;
+    }
+
+    .badge-high {
+        @apply badge border-flare-500/30 bg-flare-500/10 text-flare-300;
+    }
+
+    .badge-medium {
+        @apply badge border-amber-400/30 bg-amber-400/10 text-amber-300;
+    }
+
+    .badge-low {
+        @apply badge border-brand-500/30 bg-brand-500/10 text-brand-300;
+    }
+
+    .badge-neutral {
+        @apply badge border-white/10 bg-white/[.05] text-slate-400;
+    }
+
+    .dot {
+        @apply h-1.5 w-1.5 shrink-0 rounded-full bg-current;
+    }
+
+    /* --- Tables ----------------------------------------------------------- */
+    .th {
+        @apply px-6 py-3.5 text-left text-[.7rem] font-semibold uppercase tracking-wider text-slate-500;
+    }
+
+    .td {
+        @apply px-6 py-4 align-top text-sm text-slate-300;
+    }
+
+    .row-hover {
+        @apply transition-colors hover:bg-white/[.03];
+    }
+
+    /* --- Alerts ----------------------------------------------------------- */
+    .alert {
+        @apply flex items-start gap-3 rounded-xl border px-4 py-3 text-sm;
+    }
+
+    .alert-success {
+        @apply alert border-brand-500/25 bg-brand-500/[.08] text-brand-200;
+    }
+
+    .alert-error {
+        @apply alert border-flare-500/25 bg-flare-500/[.08] text-flare-200;
+    }
+
+    .alert-warning {
+        @apply alert border-amber-400/25 bg-amber-400/[.08] text-amber-200;
+    }
+
+    .alert-info {
+        @apply alert border-brand-500/20 bg-ink-800/80 text-slate-300;
+    }
+
+    /* --- Type helpers ----------------------------------------------------- */
+    .page-title {
+        @apply text-xl font-semibold text-slate-100;
+    }
+
+    .eyebrow {
+        @apply text-xs font-semibold uppercase tracking-[.14em] text-brand-400;
+    }
+
+    .muted {
+        @apply text-slate-400;
+    }
+
+    .gradient-text {
+        @apply bg-brand-text bg-clip-text text-transparent;
+    }
+
+    .link {
+        @apply text-brand-400 underline-offset-4 transition-colors hover:text-brand-300 hover:underline;
+    }
+
+    /* --- Decoration ------------------------------------------------------- */
+    .hairline-top {
+        @apply relative;
+    }
+
+    .hairline-top::before {
+        content: '';
+        @apply pointer-events-none absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-white/15 to-transparent;
+    }
+}
+
+/* Alpine: hide elements until Alpine has initialised */
+@layer base {
+    [x-cloak] {
+        display: none !important;
+    }
+}

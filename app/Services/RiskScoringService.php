@@ -18,10 +18,10 @@ class RiskScoringService
         // Add metadata to each risk
         foreach ($risks as &$risk) {
             $risk['badge_class'] = match ($risk['risk_level']) {
-                'High' => 'bg-red-100 text-red-800',
-                'Medium' => 'bg-yellow-100 text-yellow-800',
-                'Low' => 'bg-green-100 text-green-800',
-                default => 'bg-gray-100 text-gray-800',
+                'High' => 'badge-high',
+                'Medium' => 'badge-medium',
+                'Low' => 'badge-low',
+                default => 'badge-neutral',
             };
         }
 

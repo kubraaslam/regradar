@@ -10,7 +10,23 @@ Route::get('/', function () {
 });
 
 Route::get('/dashboard', function () {
-    return view('dashboard');
+    $analyses = \App\Models\Analysis::where('user_id', auth()->id())
+        ->orderByDesc('created_at')
+        ->get();
+
+    $completed = $analyses->where('status', 'completed')->filter(fn($a) => is_array($a->results));
+
+    return view('dashboard', [
+        'recent' => $analyses->take(6),
+        'stats' => [
+            'analyses' => $analyses->count(),
+            'completed' => $completed->count(),
+            'high' => $completed->sum(fn($a) => $a->results['total_high'] ?? 0),
+            'medium' => $completed->sum(fn($a) => $a->results['total_medium'] ?? 0),
+            'low' => $completed->sum(fn($a) => $a->results['total_low'] ?? 0),
+            'features' => \App\Models\FeatureRegistry::where('user_id', auth()->id())->count(),
+        ],
+    ]);
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
