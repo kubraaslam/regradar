@@ -29,41 +29,45 @@ class KeywordBaselineService
      */
     public function analyse(array $preprocessed, array $registry): array
     {
-        $haystack = $this->buildHaystack($preprocessed);
+        // Production and test paths are matched separately so that this baseline
+        // is given the same production-versus-test signal as the language model.
+        // Handicapping it would overstate the benefit of the LLM pipeline; the
+        // comparison is only meaningful if the simple alternative is given every
+        // fair advantage.
+        $productionHaystack = $this->haystackFor($preprocessed, 'production');
+        $testHaystack = $this->haystackFor($preprocessed, 'test');
+
         $risks = [];
 
         foreach ($registry as $feature) {
-            $matched = [];
+            $needles = $this->needlesFor($feature);
 
-            foreach (array_merge($feature['code_areas'] ?? [], $feature['endpoints'] ?? []) as $needle) {
-                $needle = trim((string) $needle);
+            $productionMatches = $this->match($needles, $productionHaystack);
 
-                if ($needle === '') {
-                    continue;
-                }
+            if ($productionMatches !== []) {
+                $risks[] = [
+                    'feature' => $feature['feature'],
+                    // Always High on a production match: a textual hit is by
+                    // definition a direct overlap, and this baseline has no
+                    // mechanism for recognising an indirect dependency.
+                    'risk_level' => 'High',
+                    'reason' => 'Direct textual match on ' . implode(', ', $productionMatches)
+                        . ' in the changed production files or functions.',
+                ];
 
-                foreach ($haystack as $candidate) {
-                    if (stripos($candidate, $needle) !== false) {
-                        $matched[] = $needle;
-                        break;
-                    }
-                }
-            }
-
-            $matched = array_values(array_unique($matched));
-
-            if ($matched === []) {
                 continue;
             }
 
-            $risks[] = [
-                'feature' => $feature['feature'],
-                // Always High: a textual match is by definition a direct overlap.
-                // This baseline has no mechanism for grading severity.
-                'risk_level' => 'High',
-                'reason' => 'Direct textual match on ' . implode(', ', $matched)
-                    . ' in the changed files or functions.',
-            ];
+            $testMatches = $this->match($needles, $testHaystack);
+
+            if ($testMatches !== []) {
+                $risks[] = [
+                    'feature' => $feature['feature'],
+                    'risk_level' => 'Low',
+                    'reason' => 'Textual match on ' . implode(', ', $testMatches)
+                        . ' in changed test files only. No production code changed.',
+                ];
+            }
         }
 
         return [
@@ -74,15 +78,57 @@ class KeywordBaselineService
     }
 
     /**
-     * Every string from the diff that a registry entry could match against.
+     * @return array<int, string>
      */
-    protected function buildHaystack(array $preprocessed): array
+    protected function needlesFor(array $feature): array
     {
-        return array_values(array_filter(array_merge(
-            $preprocessed['changed_files'] ?? [],
-            $preprocessed['changed_functions'] ?? [],
-            $preprocessed['changed_endpoints'] ?? [],
+        $needles = array_merge($feature['code_areas'] ?? [], $feature['endpoints'] ?? []);
+
+        return array_values(array_filter(array_map(
+            fn($n) => trim((string) $n),
+            $needles
         )));
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    protected function match(array $needles, array $haystack): array
+    {
+        $matched = [];
+
+        foreach ($needles as $needle) {
+            foreach ($haystack as $candidate) {
+                if (stripos($candidate, $needle) !== false) {
+                    $matched[] = $needle;
+                    break;
+                }
+            }
+        }
+
+        return array_values(array_unique($matched));
+    }
+
+    /**
+     * Every string from the diff that a registry entry could match against,
+     * restricted to one side of the production and test split.
+     *
+     * @return array<int, string>
+     */
+    protected function haystackFor(array $preprocessed, string $side): array
+    {
+        $parts = $side === 'production'
+            ? array_merge(
+                $preprocessed['production_files'] ?? $preprocessed['changed_files'] ?? [],
+                $preprocessed['changed_functions'] ?? [],
+                $preprocessed['changed_endpoints'] ?? [],
+            )
+            : array_merge(
+                $preprocessed['test_files'] ?? [],
+                $preprocessed['test_functions'] ?? [],
+            );
+
+        return array_values(array_filter($parts));
     }
 
     protected function summarise(array $risks): string
