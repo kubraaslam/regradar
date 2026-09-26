@@ -45,6 +45,34 @@
                     Public repositories, or any repo your configured GitHub token can read.
                 </p>
 
+                <div class="mt-5 grid gap-4 sm:grid-cols-2">
+                    <div>
+                        <label for="llm_model" class="label">Model</label>
+                        <select id="llm_model" name="llm_model" class="input" required>
+                            @foreach ($models as $value => $label)
+                                <option value="{{ $value }}" @selected(old('llm_model', $defaultModel) === $value)>
+                                    {{ $label }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div>
+                        <label for="prompting_strategy" class="label">Prompting strategy</label>
+                        <select id="prompting_strategy" name="prompting_strategy" class="input" required>
+                            @foreach ($strategies as $value => $label)
+                                <option value="{{ $value }}" @selected(old('prompting_strategy', $defaultStrategy) === $value)>
+                                    {{ $label }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+
+                <p class="mt-2 text-xs text-slate-500">
+                    Each combination is recorded against the report, so results stay comparable during evaluation.
+                </p>
+
                 <button type="submit" class="btn-primary mt-6 w-full" x-bind:disabled="busy">
                     <span class="inline-flex items-center gap-2" x-show="!busy">
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">

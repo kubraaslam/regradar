@@ -45,6 +45,12 @@
                                     {{ $analysis->created_at->diffForHumans() }}
                                     <span class="text-slate-700">·</span>
                                     {{ $analysis->created_at->format('j M Y, H:i') }}
+                                    <span class="text-slate-700">·</span>
+                                    <span class="font-mono">
+                                        {{ \App\Services\LLMService::MODEL_LABELS[$analysis->llm_model] ?? $analysis->llm_model }}
+                                        /
+                                        {{ \App\Services\LLMService::STRATEGY_LABELS[$analysis->prompting_strategy] ?? $analysis->prompting_strategy }}
+                                    </span>
                                 </p>
                             </div>
                         </div>

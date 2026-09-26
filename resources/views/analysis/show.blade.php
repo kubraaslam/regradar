@@ -63,6 +63,22 @@
                         <p class="mt-0.5 font-medium text-slate-400">
                             {{ $analysis->created_at->format('j M Y, H:i') }}
                         </p>
+                        <p class="mt-2">
+                            <span class="badge-neutral font-mono">
+                                {{ \App\Services\LLMService::MODEL_LABELS[$analysis->llm_model] ?? $analysis->llm_model }}
+                                <span class="text-slate-600">·</span>
+                                {{ \App\Services\LLMService::STRATEGY_LABELS[$analysis->prompting_strategy] ?? $analysis->prompting_strategy }}
+                            </span>
+                        </p>
+                        @if ($analysis->duration_ms)
+                            <p class="mt-1.5 font-mono text-[.7rem] text-slate-600">
+                                {{ number_format($analysis->duration_ms / 1000, 1) }}s
+                                @if ($analysis->prompt_tokens)
+                                    <span class="text-slate-700">·</span>
+                                    {{ number_format($analysis->prompt_tokens + $analysis->completion_tokens) }} tokens
+                                @endif
+                            </p>
+                        @endif
                     </div>
                 </div>
 
@@ -88,6 +104,24 @@
                         <h3 class="eyebrow">Summary</h3>
                     </div>
                     <p class="mt-3 text-sm leading-relaxed text-slate-300">{{ $r['summary'] }}</p>
+
+                    @if (!empty($r['testing_focus']))
+                        <div class="mt-5 border-t border-white/[.06] pt-4">
+                            <h4 class="eyebrow">What to test</h4>
+                            <ul class="mt-3 space-y-2">
+                                @foreach ($r['testing_focus'] as $item)
+                                    <li class="flex items-start gap-2.5 text-sm text-slate-300">
+                                        <svg class="mt-1 h-3.5 w-3.5 shrink-0 text-brand-400" fill="none"
+                                            viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.4">
+                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                d="M4.5 12.75l6 6 9-13.5" />
+                                        </svg>
+                                        <span>{{ $item }}</span>
+                                    </li>
+                                @endforeach
+                            </ul>
+                        </div>
+                    @endif
                 </div>
             @endif
 

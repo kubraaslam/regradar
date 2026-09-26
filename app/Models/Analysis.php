@@ -13,11 +13,19 @@ class Analysis extends Model
         'repo_name',
         'pr_number',
         'results',
-        'status'
+        'status',
+        'llm_model',
+        'prompting_strategy',
+        'duration_ms',
+        'prompt_tokens',
+        'completion_tokens',
     ];
 
     protected $casts = [
         'results' => 'array',
+        'duration_ms' => 'integer',
+        'prompt_tokens' => 'integer',
+        'completion_tokens' => 'integer',
     ];
 
     public function user()

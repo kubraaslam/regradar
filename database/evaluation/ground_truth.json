@@ -1,0 +1,36 @@
+{
+    "_comment": [
+        "Ground truth for the RO4 evaluation.",
+        "",
+        "One entry per curated regression-inducing pull request. 'expected' lists the",
+        "features that genuinely regressed, established by cross-referencing the diff,",
+        "the linked issue report and the fix commit, as described in proposal section 5.3.",
+        "",
+        "Feature names must match the feature_name values in your Feature Registry",
+        "exactly, because scoring compares them as strings.",
+        "",
+        "risk_level is the label a correct analysis should produce:",
+        "  High   - the feature's own code area changed directly",
+        "  Medium - the feature depends indirectly on changed code",
+        "  Low    - the overlap is minor or unlikely to cause a regression",
+        "",
+        "A feature absent from 'expected' is treated as correctly omitted, so any",
+        "prediction naming it counts as a false positive.",
+        "",
+        "The entry below is an example of the required shape. Replace it with your",
+        "15 to 20 curated pull requests before running a full evaluation."
+    ],
+    "pull_requests": [
+        {
+            "pr_url": "https://github.com/laravel/framework/pull/41969",
+            "repository": "laravel/framework",
+            "note": "Fixes a regression in ExcludeIf by requiring a Closure rather than any callable.",
+            "expected": [
+                {
+                    "feature": "Form Request Validation",
+                    "risk_level": "High"
+                }
+            ]
+        }
+    ]
+}

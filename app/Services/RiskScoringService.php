@@ -28,6 +28,7 @@ class RiskScoringService
         return [
             'risks' => $risks,
             'summary' => $llmOutput['summary'] ?? '',
+            'testing_focus' => $llmOutput['testing_focus'] ?? [],
             'total_high' => count(array_filter($risks, fn($r) => $r['risk_level'] === 'High')),
             'total_medium' => count(array_filter($risks, fn($r) => $r['risk_level'] === 'Medium')),
             'total_low' => count(array_filter($risks, fn($r) => $r['risk_level'] === 'Low')),

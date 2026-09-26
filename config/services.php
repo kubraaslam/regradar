@@ -43,4 +43,12 @@ return [
         'key' => env('OPENAI_API_KEY'),
     ],
 
+    'gemini' => [
+        'key' => env('GEMINI_API_KEY'),
+    ],
+
+    'groq' => [
+        'key' => env('GROQ_API_KEY'),
+    ],
+
 ];
