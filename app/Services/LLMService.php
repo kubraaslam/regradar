@@ -395,10 +395,28 @@ class LLMService
             ],
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
 
+        $registryThree = json_encode([
+            ['feature' => 'Checkout Payment', 'code_areas' => ['PaymentController', 'StripeGateway'], 'endpoints' => ['/api/checkout/pay']],
+        ], JSON_UNESCAPED_SLASHES);
+
+        $outputThree = json_encode([
+            'risks' => [
+                [
+                    'feature' => 'Checkout Payment',
+                    'risk_level' => 'Low',
+                    'reason' => 'Only the test file covering PaymentController changed. No production code was modified, so the behaviour of the payment flow is unchanged.',
+                ],
+            ],
+            'summary' => 'This pull request changes only a test file. Checkout Payment is the feature that test covers, but no shipped code was modified, so there is no regression risk to the running application. The change is worth noting because it indicates recent activity around the payment tests, but it does not require a regression pass.',
+            'testing_focus' => [
+                'Confirm the payment test suite still passes on the target branch',
+            ],
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+
         return $this->preamble()
             . <<<PROMPT
 
-            Here are two worked examples of the task.
+            Here are three worked examples of the task.
 
             EXAMPLE 1
             Diff summary:
@@ -418,6 +436,16 @@ class LLMService
             {$registryTwo}
             Expected output:
             {$outputTwo}
+
+            EXAMPLE 3
+            Diff summary:
+            NOTE: This pull request changes no production code. Only test or documentation files were modified, so application behaviour is unchanged.
+            Production files changed: (none)
+            Test files changed: tests/Feature/PaymentControllerTest.php
+            Feature registry:
+            {$registryThree}
+            Expected output:
+            {$outputThree}
 
             Now perform the same task on the following real input.
 
@@ -502,7 +530,10 @@ class LLMService
           ]
         }
 
-        Risk levels: High (direct overlap with changed code), Medium (indirect dependency), Low (minor or unlikely impact).
+        Risk levels: High (direct overlap with changed production code), Medium (indirect dependency on changed production code), Low (minor or unlikely impact).
+
+        A change confined to test files, documentation or changelog entries does not alter application behaviour. Where a feature is touched only by such files, rate it Low and state in the reason that no production code changed. Never rate a feature High on the strength of a test file alone.
+
         Only include features that have some risk. Omit features with no risk.
 
         Write summary as continuous prose, not a list, and do not repeat the reason fields verbatim.
