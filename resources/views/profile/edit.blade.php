@@ -21,6 +21,12 @@
 
             <div class="card card-pad">
                 <div class="max-w-xl">
+                    @include('profile.partials.retention-form')
+                </div>
+            </div>
+
+            <div class="card card-pad">
+                <div class="max-w-xl">
                     @include('profile.partials.delete-user-form')
                 </div>
             </div>

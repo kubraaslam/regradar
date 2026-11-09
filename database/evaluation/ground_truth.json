@@ -6,30 +6,127 @@
         "features that genuinely regressed, established by cross-referencing the diff,",
         "the linked issue report and the fix commit, as described in proposal section 5.3.",
         "",
-        "Feature names must match the feature_name values in your Feature Registry",
-        "exactly, because scoring compares them as strings.",
+        "Feature names must match the feature_name values in the evaluation registry",
+        "exactly (database/seeders/EvaluationRegistrySeeder.php), because scoring",
+        "compares them as strings.",
         "",
         "risk_level is the label a correct analysis should produce:",
-        "  High   - the feature's own code area changed directly",
-        "  Medium - the feature depends indirectly on changed code",
-        "  Low    - the overlap is minor or unlikely to cause a regression",
+        "  High   - the feature's own production code area changed directly",
+        "  Medium - the feature depends indirectly on changed production code",
+        "  Low    - only test files or documentation touched the feature's area",
         "",
         "A feature absent from 'expected' is treated as correctly omitted, so any",
         "prediction naming it counts as a false positive.",
         "",
-        "The entry below is an example of the required shape. Replace it with your",
-        "15 to 20 curated pull requests before running a full evaluation."
+        "label_status is 'proposed' until the researcher has checked the label",
+        "against the linked issue and fix commit, then 'verified'. The evaluation",
+        "command warns while any label remains unverified; do not report figures",
+        "until every label is verified.",
+        "",
+        "Proposal 5.3 targets 15 to 20 pull requests. Add further entries in the",
+        "same shape, covering all three risk levels across all three repositories."
     ],
     "pull_requests": [
         {
             "pr_url": "https://github.com/laravel/framework/pull/41969",
             "repository": "laravel/framework",
-            "note": "Fixes a regression in ExcludeIf by requiring a Closure rather than any callable.",
+            "label_status": "proposed",
+            "note": "Fixes a regression in the ExcludeIf rule by requiring a Closure rather than any callable. Changes Validation/Rules/ExcludeIf.php directly.",
             "expected": [
-                {
-                    "feature": "Validation Rules",
-                    "risk_level": "High"
-                }
+                { "feature": "Validation Rules", "risk_level": "High" }
+            ]
+        },
+        {
+            "pr_url": "https://github.com/laravel/framework/pull/43897",
+            "repository": "laravel/framework",
+            "label_status": "proposed",
+            "note": "Patches a nested array validation rule regression in Validation/ValidationRuleParser.php. ValidationRuleParser is deliberately not a registered code area, so a keyword match cannot find this.",
+            "expected": [
+                { "feature": "Validation Rules", "risk_level": "High" }
+            ]
+        },
+        {
+            "pr_url": "https://github.com/laravel/framework/pull/42517",
+            "repository": "laravel/framework",
+            "label_status": "proposed",
+            "note": "Fixes a regression when only some route parameters are scoped. Changes Routing/ImplicitRouteBinding.php directly.",
+            "expected": [
+                { "feature": "Route Model Binding", "risk_level": "High" }
+            ]
+        },
+        {
+            "pr_url": "https://github.com/laravel/framework/pull/55213",
+            "repository": "laravel/framework",
+            "label_status": "proposed",
+            "note": "Fixes URL generation with optional parameters, a regression from #54811. Changes Routing/RouteUrlGenerator.php and the shared Routing/Route.php, which route model binding also reads.",
+            "expected": [
+                { "feature": "Route URL Generation", "risk_level": "High" },
+                { "feature": "Route Model Binding", "risk_level": "Medium" }
+            ]
+        },
+        {
+            "pr_url": "https://github.com/laravel/framework/pull/54665",
+            "repository": "laravel/framework",
+            "label_status": "proposed",
+            "note": "Fixes a regression with Factory::guessModelNamesUsing(). Changes Eloquent/Factories/Factory.php and the shared test lifecycle that prepares the database for assertions.",
+            "expected": [
+                { "feature": "Model Factories", "risk_level": "High" },
+                { "feature": "Database Test Assertions", "risk_level": "Medium" }
+            ]
+        },
+        {
+            "pr_url": "https://github.com/laravel/framework/pull/58966",
+            "repository": "laravel/framework",
+            "label_status": "proposed",
+            "note": "Adds regression tests for inRandomOrder. Changes tests/Database/DatabaseQueryBuilderTest.php only; no production code.",
+            "expected": [
+                { "feature": "Query Builder", "risk_level": "Low" }
+            ]
+        },
+        {
+            "pr_url": "https://github.com/laravel/framework/pull/48533",
+            "repository": "laravel/framework",
+            "label_status": "proposed",
+            "note": "Adds an updateOrCreate regression test for HasManyThrough. Changes a test file only; no production code.",
+            "expected": [
+                { "feature": "Eloquent Relations", "risk_level": "Low" }
+            ]
+        },
+        {
+            "pr_url": "https://github.com/rails/rails/pull/54743",
+            "repository": "rails/rails",
+            "label_status": "proposed",
+            "note": "Fixes a regression in ActiveRecord::Result#column_types. Changes active_record/result.rb directly; attribute access consumes the column types it produces.",
+            "expected": [
+                { "feature": "Query Results", "risk_level": "High" },
+                { "feature": "Attribute Access", "risk_level": "Medium" }
+            ]
+        },
+        {
+            "pr_url": "https://github.com/rails/rails/pull/52407",
+            "repository": "rails/rails",
+            "label_status": "proposed",
+            "note": "Adds a regression test for development routes source mapping. Changes railties/test/rails_info_controller_test.rb only; no production code.",
+            "expected": [
+                { "feature": "Application Info Routes", "risk_level": "Low" }
+            ]
+        },
+        {
+            "pr_url": "https://github.com/django/django/pull/20060",
+            "repository": "django/django",
+            "label_status": "proposed",
+            "note": "Fixes a regression in urlize for multi-part domain names. Changes django/utils/html.py directly.",
+            "expected": [
+                { "feature": "Text and HTML Filters", "risk_level": "High" }
+            ]
+        },
+        {
+            "pr_url": "https://github.com/django/django/pull/20928",
+            "repository": "django/django",
+            "label_status": "proposed",
+            "note": "Adds an inspectdb regression test for sqlite_master foreign keys. Changes tests/inspectdb/tests.py only; no production code.",
+            "expected": [
+                { "feature": "Database Introspection", "risk_level": "Low" }
             ]
         }
     ]

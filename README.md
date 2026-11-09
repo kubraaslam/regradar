@@ -1,59 +1,156 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# RegRadar
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+An LLM-powered regression risk analysis platform for QA engineers.
 
-## About Laravel
+RegRadar reads a GitHub pull request diff, maps the change onto a QA-maintained
+**Feature Registry**, and returns a ranked report of which product features are at
+risk of regression, each with a stated reason, a confidence score and concrete
+regression tests to carry out.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+Final Year Project, Kubra Aslam (CB012428). Supervisor: Adshayani Pirapaharan.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Requirements
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- PHP 8.2 or later, with the `sqlite3` or `pdo_mysql` extension
+- Composer 2
+- Node.js 20 or later
+- API keys for GitHub, OpenAI, Google Gemini and Groq
 
-## Learning Laravel
+## Setup
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+```bash
+composer install
+npm install
+cp .env.example .env
+php artisan key:generate
+```
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+Add your API keys to `.env`:
 
-## Laravel Sponsors
+```
+GITHUB_TOKEN=
+OPENAI_API_KEY=
+GEMINI_API_KEY=
+GROQ_API_KEY=
+```
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+SQLite works with no further configuration. To use MySQL instead, set the `DB_*`
+values in `.env`. Then create the database, seed it, and build the interface:
 
-### Premium Partners
+```bash
+php artisan migrate --seed
+npm run build
+php artisan serve
+```
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+Open <http://localhost:8000>.
 
-## Contributing
+## Demonstration accounts
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Seeding creates one account per role. The password for each is set in
+`database/seeders/UserSeeder.php`.
 
-## Code of Conduct
+| Email | Role | Can |
+|---|---|---|
+| `qa@regradar.com` | QA Engineer | Run analyses, maintain the Feature Registry |
+| `dev@regradar.com` | Developer | View reports, history and the registry (read-only) |
+| `admin@regradar.com` | Admin | Everything, plus manage user accounts and roles |
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+Seeding also loads a demonstration registry and the three evaluation registries
+for `laravel/framework`, `rails/rails` and `django/django`. Every seeder is
+idempotent, so `php artisan db:seed` is safe to run again.
 
-## Security Vulnerabilities
+## Using it
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+1. **Feature Registry.** Map each product feature to the classes, files and
+   endpoints that implement it. Set a repository to scope an entry to one
+   codebase; see [docs/feature-registry.md](docs/feature-registry.md).
+2. **New Analysis.** Paste a GitHub pull request URL and choose a model and a
+   prompting strategy.
+3. **Report.** Review the verdict, summary, findings by severity, and what to
+   test. Filter by risk level, or export the report as a PDF.
 
-## License
+## Models and prompting strategies
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+| Model | Provider |
+|---|---|
+| GPT-4o-mini | OpenAI |
+| Gemini 3.1 Flash Lite | Google |
+| Qwen 3.8 27B | Groq |
+
+Each can be run with zero-shot, few-shot or chain-of-thought prompting, giving
+nine combinations. The models differ from those named in the proposal; see
+[docs/deviations.md](docs/deviations.md).
+
+## Evaluation (RO4)
+
+The ablation study runs every model and strategy combination, plus a
+deterministic keyword-matching baseline, over the curated pull requests in
+`database/evaluation/ground_truth.json`:
+
+```bash
+# Baseline only. Makes no model API calls.
+php artisan regradar:evaluate --baseline-only
+
+# The full nine-condition ablation.
+php artisan regradar:evaluate
+```
+
+Each pull request is scored only against its own repository's registry. Results
+are written as one row per prediction to `storage/app/evaluation/*.csv`, ready
+for scoring with pandas and scikit-learn.
+
+Useful options: `--limit=3`, `--models=gpt-4o-mini`, `--strategies=few-shot`,
+`--skip-baseline`.
+
+## Data retention (NFR8)
+
+Analyses older than 90 days are deleted unless their owner has consented to keep
+them under **Profile, Data retention**. To see what would be removed:
+
+```bash
+php artisan regradar:prune-analyses
+```
+
+This is a dry run. Deletion happens only with `--force`, which the scheduler
+applies daily. The scheduler runs only when a cron entry calls
+`php artisan schedule:run`, or while `php artisan schedule:work` is running.
+The period is set by `REGRADAR_RETENTION_DAYS`.
+
+## Tests
+
+```bash
+php artisan test
+```
+
+Tests run against an in-memory SQLite database and make no API calls.
+
+## Requirements coverage
+
+| | Requirement | Status |
+|---|---|---|
+| FR1 | Register and sign in | Implemented |
+| FR2 | QA Engineer, Developer (read-only) and Admin roles | Implemented |
+| FR3 | Retrieve the pull request diff from GitHub | Implemented |
+| FR4 | Preprocess the diff | Implemented |
+| FR5 | Three LLM models | Implemented, with substituted models |
+| FR6 | Three prompting strategies | Implemented |
+| FR7 | Cross-reference against the Feature Registry | Implemented |
+| FR8 | Ranked risk report with explanations | Implemented |
+| FR9 | Feature Registry create, read, update, delete | Implemented |
+| FR10 | Store results and registry in a database | Implemented |
+| FR11 | Export the report as PDF | Implemented |
+| FR12 | Filter the report by risk level | Implemented |
+| FR13 | Confidence score per feature | Implemented |
+| FR14 | Admin manages accounts and roles | Implemented |
+| FR15 | Analysis history | Implemented |
+| NFR1 | Report within 60 seconds | Met under normal conditions |
+| NFR3 | bcrypt passwords, bounded sessions | Implemented, with sessions in place of JWT |
+| NFR4 | Graceful handling of API failures | Implemented, with retry and backoff |
+| NFR5 | New models without core changes | Implemented |
+| NFR6 | Documented registry schema | [Implemented](docs/feature-registry.schema.json) |
+| NFR7 | Modern browsers, no plugins | Implemented |
+| NFR8 | 90-day retention without consent | Implemented |
+
+NFR2 (SUS score) is measured in the user study. Deviations, scope decisions and
+methodological notes are in [docs/deviations.md](docs/deviations.md).

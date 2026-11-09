@@ -49,8 +49,15 @@ class FeatureRegistrySeeder extends Seeder
             ],
         ];
 
+        // Demonstration registry for a generic application. Unscoped, so these
+        // apply to pull requests from any repository in the live interface; the
+        // evaluation never sees them because it scopes strictly by repository.
+        // firstOrCreate keeps re-seeding from duplicating entries.
         foreach ($features as $feature) {
-            FeatureRegistry::create(array_merge($feature, ['user_id' => $qaUser->id]));
+            FeatureRegistry::firstOrCreate(
+                ['user_id' => $qaUser->id, 'repository' => null, 'feature_name' => $feature['feature_name']],
+                $feature
+            );
         }
     }
 }

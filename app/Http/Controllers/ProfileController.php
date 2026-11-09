@@ -38,6 +38,21 @@ class ProfileController extends Controller
     }
 
     /**
+     * Record or withdraw consent to keep analyses beyond the retention period
+     * (SRS NFR8).
+     */
+    public function updateRetention(Request $request): RedirectResponse
+    {
+        $consent = $request->boolean('retain');
+
+        $request->user()->forceFill([
+            'retention_consent_at' => $consent ? ($request->user()->retention_consent_at ?? now()) : null,
+        ])->save();
+
+        return Redirect::route('profile.edit')->with('status', 'retention-updated');
+    }
+
+    /**
      * Delete the user's account.
      */
     public function destroy(Request $request): RedirectResponse
@@ -47,6 +62,14 @@ class ProfileController extends Controller
         ]);
 
         $user = $request->user();
+
+        // The last active admin deleting their own account would leave no one
+        // able to manage users (SRS FR14).
+        if ($user->isLastActiveAdmin()) {
+            return Redirect::route('profile.edit')->withErrors([
+                'password' => 'You are the only active admin. Assign another admin before deleting this account.',
+            ], 'userDeletion');
+        }
 
         Auth::logout();
 

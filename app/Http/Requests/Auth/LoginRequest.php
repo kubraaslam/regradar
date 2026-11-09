@@ -50,6 +50,17 @@ class LoginRequest extends FormRequest
             ]);
         }
 
+        // SRS FR14: a deactivated account cannot sign in. Checked only after the
+        // password is confirmed, so the message never reveals whether an
+        // unauthenticated guess matched a real deactivated account.
+        if (! Auth::user()->isActive()) {
+            Auth::guard('web')->logout();
+
+            throw ValidationException::withMessages([
+                'email' => 'This account has been deactivated. Contact an administrator to restore access.',
+            ]);
+        }
+
         RateLimiter::clear($this->throttleKey());
     }
 
