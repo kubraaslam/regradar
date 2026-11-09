@@ -42,6 +42,25 @@ class AnalysisController extends Controller
             'prompting_strategy' => ['required', Rule::in(LLMService::STRATEGIES)],
         ]);
 
+        // A URL that is not a pull request is an input error, not an analysis
+        // failure, so it is reported against the field and no record is created.
+        try {
+            $pr = GitHubService::parsePullRequestUrl($validated['pr_url']);
+        } catch (Exception $e) {
+            return back()->withInput()->withErrors(['pr_url' => $e->getMessage()]);
+        }
+
+        // Only entries that apply to this pull request's repository are sent to
+        // the model: those scoped to it, plus unscoped general entries.
+        $registry = $this->registryService->getFormattedForLLM(auth()->id(), $pr['repository']);
+
+        // Checked before the record is created, so an empty registry no longer
+        // leaves an orphaned analysis stuck in the pending state.
+        if ($registry === []) {
+            return redirect()->route('feature-registry.create')
+                ->with('warning', "No Feature Registry entries apply to {$pr['repository']}. Add features scoped to that repository, or unscoped features, before running an analysis.");
+        }
+
         // Create a pending analysis record. The model and strategy are stored up
         // front rather than on success, so that a failed run still records which
         // combination produced the failure.
@@ -49,9 +68,9 @@ class AnalysisController extends Controller
             'user_id' => auth()->id(),
             'pr_url' => $validated['pr_url'],
             'status' => 'pending',
-            'repo_owner' => '',
-            'repo_name' => '',
-            'pr_number' => 0,
+            'repo_owner' => $pr['owner'],
+            'repo_name' => $pr['repo'],
+            'pr_number' => $pr['number'],
             'llm_model' => $validated['llm_model'],
             'prompting_strategy' => $validated['prompting_strategy'],
         ]);
@@ -63,15 +82,7 @@ class AnalysisController extends Controller
             // Step 2: Preprocess the diff
             $preprocessed = $this->preprocessor->process($rawDiff);
 
-            // Step 3: Get feature registry
-            $registry = $this->registryService->getFormattedForLLM(auth()->id());
-
-            if (empty($registry)) {
-                return redirect()->route('feature-registry.create')
-                    ->with('warning', 'Please add features to your registry before running an analysis.');
-            }
-
-            // Step 4: Call the selected model with the selected prompting strategy
+            // Step 3: Call the selected model with the selected prompting strategy
             $llmOutput = $this->llmService->analyse(
                 $validated['llm_model'],
                 $validated['prompting_strategy'],
@@ -79,10 +90,10 @@ class AnalysisController extends Controller
                 $registry
             );
 
-            // Step 5: Score and rank
+            // Step 4: Score and rank
             $results = $this->scoringService->scoreAndRank($llmOutput, $preprocessed);
 
-            // Step 6: Save results alongside what the run cost to produce
+            // Step 5: Save results alongside what the run cost to produce
             $usage = $this->llmService->lastUsage();
 
             $analysis->update([
@@ -113,16 +124,28 @@ class AnalysisController extends Controller
         }
     }
 
-    public function show(Analysis $analysis)
+    public function show(Request $request, Analysis $analysis)
     {
+        // Previously any signed-in QA engineer could open any analysis by
+        // changing the ID in the URL.
+        abort_unless(
+            $request->user()->canViewAll() || $request->user()->owns($analysis),
+            403,
+            'You do not have access to this analysis.'
+        );
+
+        $analysis->loadMissing('user');
+
         return view('analysis.show', compact('analysis'));
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        $analyses = Analysis::where('user_id', auth()->id())
+        $analyses = Analysis::visibleTo($request->user())
+            ->with('user')
             ->orderByDesc('created_at')
             ->get();
+
         return view('analysis.index', compact('analyses'));
     }
 }

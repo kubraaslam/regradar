@@ -8,14 +8,18 @@
                     The map RegRadar uses to turn a diff into affected features.
                 </p>
             </div>
-            <a href="{{ route('feature-registry.create') }}" class="btn-primary">
-                <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                    <path d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" />
-                </svg>
-                Add feature
-            </a>
+            @can('manage')
+                <a href="{{ route('feature-registry.create') }}" class="btn-primary">
+                    <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" />
+                    </svg>
+                    Add feature
+                </a>
+            @endcan
         </div>
     </x-slot>
+
+    @php $canManage = Gate::allows('manage'); @endphp
 
     <div class="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
         <div class="card animate-fade-up overflow-hidden">
@@ -27,7 +31,9 @@
                                 <th class="th">Feature</th>
                                 <th class="th">Code areas</th>
                                 <th class="th">Endpoints</th>
-                                <th class="th text-right">Actions</th>
+                                @if ($canManage)
+                                    <th class="th text-right">Actions</th>
+                                @endif
                             </tr>
                         </thead>
                         <tbody class="divide-hairline">
@@ -35,6 +41,17 @@
                                 <tr class="row-hover">
                                     <td class="td">
                                         <p class="font-semibold text-slate-100">{{ $feature->feature_name }}</p>
+                                        <p class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+                                            @if ($feature->repository)
+                                                <span class="font-mono text-slate-400">{{ $feature->repository }}</span>
+                                            @else
+                                                <span class="text-slate-600">All repositories</span>
+                                            @endif
+                                            @if (Auth::user()->canViewAll() && $feature->user)
+                                                <span class="text-slate-700">·</span>
+                                                <span class="text-slate-600">{{ $feature->user->name }}</span>
+                                            @endif
+                                        </p>
                                         @if ($feature->description)
                                             <p class="mt-1 max-w-xs text-xs leading-relaxed text-slate-500">
                                                 {{ $feature->description }}
@@ -68,24 +85,28 @@
                                         </div>
                                     </td>
 
-                                    <td class="td text-right">
-                                        <div class="inline-flex items-center gap-1">
-                                            <a href="{{ route('feature-registry.edit', $feature) }}"
-                                                class="btn-ghost btn-sm">
-                                                Edit
-                                            </a>
-                                            <form method="POST"
-                                                action="{{ route('feature-registry.destroy', $feature) }}"
-                                                class="inline"
-                                                onsubmit="return confirm('Delete “{{ $feature->feature_name }}” from the registry?')">
-                                                @csrf @method('DELETE')
-                                                <button type="submit"
-                                                    class="btn btn-sm text-slate-400 hover:bg-flare-500/10 hover:text-flare-400">
-                                                    Delete
-                                                </button>
-                                            </form>
-                                        </div>
-                                    </td>
+                                    @if ($canManage)
+                                        <td class="td text-right">
+                                            @if (Auth::user()->owns($feature))
+                                                <div class="inline-flex items-center gap-1">
+                                                    <a href="{{ route('feature-registry.edit', $feature) }}"
+                                                        class="btn-ghost btn-sm">
+                                                        Edit
+                                                    </a>
+                                                    <form method="POST"
+                                                        action="{{ route('feature-registry.destroy', $feature) }}"
+                                                        class="inline"
+                                                        onsubmit="return confirm('Delete “{{ $feature->feature_name }}” from the registry?')">
+                                                        @csrf @method('DELETE')
+                                                        <button type="submit"
+                                                            class="btn btn-sm text-slate-400 hover:bg-flare-500/10 hover:text-flare-400">
+                                                            Delete
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            @endif
+                                        </td>
+                                    @endif
                                 </tr>
                             @endforeach
                         </tbody>
@@ -100,13 +121,19 @@
                                 d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25z" />
                         </svg>
                     </span>
-                    <p class="mt-5 text-base font-semibold text-slate-200">Your registry is empty</p>
+                    <p class="mt-5 text-base font-semibold text-slate-200">The registry is empty</p>
                     <p class="mx-auto mt-1.5 max-w-md text-sm text-slate-500">
-                        Add the features you care about, along with the classes and endpoints behind them. RegRadar
-                        needs at least one before it can analyse a pull request.
+                        @if ($canManage)
+                            Add the features you care about, along with the classes and endpoints behind them.
+                            RegRadar needs at least one before it can analyse a pull request.
+                        @else
+                            No QA engineer has registered any features yet.
+                        @endif
                     </p>
-                    <a href="{{ route('feature-registry.create') }}" class="btn-primary mt-6">Add your first
-                        feature</a>
+                    @if ($canManage)
+                        <a href="{{ route('feature-registry.create') }}" class="btn-primary mt-6">Add your first
+                            feature</a>
+                    @endif
                 </div>
             @endif
         </div>

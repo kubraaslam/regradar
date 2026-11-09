@@ -8,12 +8,14 @@
                     {{ $analyses->count() }} {{ Str::plural('report', $analyses->count()) }} on record.
                 </p>
             </div>
-            <a href="{{ route('analysis.create') }}" class="btn-primary">
-                <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                    <path d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" />
-                </svg>
-                New analysis
-            </a>
+            @can('manage')
+                <a href="{{ route('analysis.create') }}" class="btn-primary">
+                    <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" />
+                    </svg>
+                    New analysis
+                </a>
+            @endcan
         </div>
     </x-slot>
 
@@ -45,6 +47,10 @@
                                     {{ $analysis->created_at->diffForHumans() }}
                                     <span class="text-slate-700">·</span>
                                     {{ $analysis->created_at->format('j M Y, H:i') }}
+                                    @if (Auth::user()->canViewAll() && $analysis->user)
+                                        <span class="text-slate-700">·</span>
+                                        by {{ $analysis->user->name }}
+                                    @endif
                                     <span class="text-slate-700">·</span>
                                     <span class="font-mono">
                                         {{ \App\Services\LLMService::MODEL_LABELS[$analysis->llm_model] ?? $analysis->llm_model }}
@@ -88,7 +94,9 @@
                     <p class="mx-auto mt-1.5 max-w-sm text-sm text-slate-500">
                         Submit your first pull request URL and RegRadar will tell you which features to regression test.
                     </p>
-                    <a href="{{ route('analysis.create') }}" class="btn-primary mt-6">Run an analysis</a>
+                    @can('manage')
+                        <a href="{{ route('analysis.create') }}" class="btn-primary mt-6">Run an analysis</a>
+                    @endcan
                 </div>
             @endforelse
         </div>

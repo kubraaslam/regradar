@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
 class Analysis extends Model
@@ -31,5 +32,21 @@ class Analysis extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Analyses the given user may see: their own, or every analysis for roles
+     * that read across the whole team.
+     */
+    public function scopeVisibleTo(Builder $query, User $user): Builder
+    {
+        return $user->canViewAll() ? $query : $query->where('user_id', $user->id);
+    }
+
+    public function repository(): ?string
+    {
+        return $this->repo_owner && $this->repo_name
+            ? $this->repo_owner . '/' . $this->repo_name
+            : null;
     }
 }

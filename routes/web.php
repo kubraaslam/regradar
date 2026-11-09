@@ -10,7 +10,8 @@ Route::get('/', function () {
 });
 
 Route::get('/dashboard', function () {
-    $analyses = \App\Models\Analysis::where('user_id', auth()->id())
+    $analyses = \App\Models\Analysis::visibleTo(auth()->user())
+        ->with('user')
         ->orderByDesc('created_at')
         ->get();
 
@@ -24,7 +25,7 @@ Route::get('/dashboard', function () {
             'high' => $completed->sum(fn($a) => $a->results['total_high'] ?? 0),
             'medium' => $completed->sum(fn($a) => $a->results['total_medium'] ?? 0),
             'low' => $completed->sum(fn($a) => $a->results['total_low'] ?? 0),
-            'features' => \App\Models\FeatureRegistry::where('user_id', auth()->id())->count(),
+            'features' => \App\Models\FeatureRegistry::visibleTo(auth()->user())->count(),
         ],
     ]);
 })->middleware(['auth', 'verified'])->name('dashboard');
@@ -41,15 +42,20 @@ Route::get('/test-github', function () {
     return response($diff)->header('Content-Type', 'text/plain');
 });
 
+// Write access: QA engineers and admins run analyses and maintain the registry.
+// Registered first so that /analysis/create is matched before /analysis/{id}.
 Route::middleware(['auth', 'role:qa_engineer,admin'])->group(function () {
     Route::get('/analysis/create', [AnalysisController::class, 'create'])->name('analysis.create');
     Route::post('/analysis', [AnalysisController::class, 'store'])->name('analysis.store');
-    Route::get('/analysis/{analysis}', [AnalysisController::class, 'show'])->name('analysis.show');
-    Route::get('/analysis', [AnalysisController::class, 'index'])->name('analysis.index');
+    Route::resource('feature-registry', FeatureRegistryController::class)->except(['index', 'show']);
 });
 
-Route::middleware(['auth', 'role:qa_engineer,admin'])->group(function () {
-    Route::resource('feature-registry', FeatureRegistryController::class);
+// Read access: all three roles. Developers are read-only (SRS FR2), so they
+// reach reports, history and the registry, but none of the routes above.
+Route::middleware(['auth', 'role:qa_engineer,developer,admin'])->group(function () {
+    Route::get('/analysis', [AnalysisController::class, 'index'])->name('analysis.index');
+    Route::get('/analysis/{analysis}', [AnalysisController::class, 'show'])->whereNumber('analysis')->name('analysis.show');
+    Route::get('/feature-registry', [FeatureRegistryController::class, 'index'])->name('feature-registry.index');
 });
 
 Route::get('/test-openai', function () {

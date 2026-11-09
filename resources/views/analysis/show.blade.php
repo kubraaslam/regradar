@@ -63,6 +63,9 @@
                         <p class="mt-0.5 font-medium text-slate-400">
                             {{ $analysis->created_at->format('j M Y, H:i') }}
                         </p>
+                        @if (Auth::user()->canViewAll() && $analysis->user && $analysis->user_id !== Auth::id())
+                            <p class="mt-0.5">by {{ $analysis->user->name }}</p>
+                        @endif
                         <p class="mt-2">
                             <span class="badge-neutral font-mono">
                                 {{ \App\Services\LLMService::MODEL_LABELS[$analysis->llm_model] ?? $analysis->llm_model }}
@@ -152,10 +155,46 @@
             </div>
 
             {{-- Risk list --}}
-            <div class="card animate-fade-up">
-                <div class="border-b border-white/[.06] px-5 py-4 sm:px-6">
-                    <h3 class="text-sm font-semibold text-slate-200">Features at risk</h3>
-                    <p class="mt-0.5 text-xs text-slate-500">Ranked highest risk first.</p>
+            @php
+                $hasConfidence = collect($r['risks'] ?? [])->contains(fn($x) => isset($x['confidence']));
+                $filters = [
+                    'all' => ['label' => 'All', 'count' => $total],
+                    'High' => ['label' => 'High', 'count' => $high],
+                    'Medium' => ['label' => 'Medium', 'count' => $medium],
+                    'Low' => ['label' => 'Low', 'count' => $low],
+                ];
+            @endphp
+
+            <div class="card animate-fade-up" x-data="{ level: 'all' }">
+                <div class="flex flex-wrap items-center justify-between gap-3 border-b border-white/[.06] px-5 py-4 sm:px-6">
+                    <div>
+                        <h3 class="text-sm font-semibold text-slate-200">Features at risk</h3>
+                        <p class="mt-0.5 text-xs text-slate-500">Ranked highest risk first.</p>
+                    </div>
+
+                    @if ($total > 0)
+                        {{-- FR12: filter the findings by risk level --}}
+                        <div class="inline-flex rounded-xl border border-white/[.07] bg-ink-900/60 p-1" role="group"
+                            aria-label="Filter findings by risk level">
+                            @foreach ($filters as $key => $f)
+                                <button type="button" @click="level = '{{ $key }}'"
+                                    :aria-pressed="(level === '{{ $key }}').toString()"
+                                    :class="level === '{{ $key }}' ? 'bg-white/[.09] text-slate-100' : 'text-slate-500 hover:text-slate-300'"
+                                    class="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500 disabled:pointer-events-none disabled:opacity-40"
+                                    @disabled($f['count'] === 0)>
+                                    @if ($key !== 'all')
+                                        <x-risk-icon :level="$key" size="h-3 w-3" @class([
+                                            'text-flare-400' => $key === 'High',
+                                            'text-amber-300' => $key === 'Medium',
+                                            'text-brand-400' => $key === 'Low',
+                                        ]) />
+                                    @endif
+                                    {{ $f['label'] }}
+                                    <span class="tabular-nums text-slate-600">{{ $f['count'] }}</span>
+                                </button>
+                            @endforeach
+                        </div>
+                    @endif
                 </div>
 
                 <div class="divide-hairline">
@@ -176,13 +215,27 @@
                             };
                         @endphp
 
-                        <div class="row-hover relative p-5 pl-6 sm:pl-7">
+                        <div class="row-hover relative p-5 pl-6 sm:pl-7"
+                            x-show="level === 'all' || level === '{{ $level }}'">
                             <span class="absolute inset-y-4 left-0 w-1 rounded-full {{ $accent }}"></span>
                             <div class="flex flex-wrap items-center gap-3">
                                 <span class="font-semibold text-slate-100">{{ $risk['feature'] }}</span>
                                 <span class="{{ $badge }}">
                                     <x-risk-icon :level="$level" />{{ $level }} risk
                                 </span>
+
+                                {{-- FR13: model-reported confidence in the rating --}}
+                                @if (isset($risk['confidence']))
+                                    <span class="inline-flex items-center gap-2 text-xs text-slate-500"
+                                        title="How certain the model is about this rating. Self-reported, not a calibrated probability.">
+                                        <span class="h-1 w-12 overflow-hidden rounded-full bg-white/[.07]" aria-hidden="true">
+                                            <span class="block h-full rounded-full bg-slate-400"
+                                                style="width: {{ (int) $risk['confidence'] }}%"></span>
+                                        </span>
+                                        <span class="font-mono tabular-nums">{{ (int) $risk['confidence'] }}%</span>
+                                        <span>confidence</span>
+                                    </span>
+                                @endif
                             </div>
                             <p class="mt-2 max-w-3xl text-sm leading-relaxed text-slate-400">
                                 {{ $risk['reason'] }}
@@ -204,6 +257,13 @@
                         </div>
                     @endforelse
                 </div>
+
+                @if ($hasConfidence)
+                    <p class="border-t border-white/[.06] px-5 py-3 text-xs text-slate-500 sm:px-6">
+                        Confidence is reported by the model itself. It indicates how certain the model is about each
+                        rating, and is not a calibrated probability.
+                    </p>
+                @endif
             </div>
 
             {{-- Changed files --}}
@@ -251,12 +311,16 @@
                     Status: <span class="font-medium text-slate-400">{{ ucfirst($analysis->status) }}</span>.
                     Check that the pull request URL is reachable, then try again.
                 </p>
-                <a href="{{ route('analysis.create') }}" class="btn-primary mt-6">Try another pull request</a>
+                @can('manage')
+                    <a href="{{ route('analysis.create') }}" class="btn-primary mt-6">Try another pull request</a>
+                @endcan
             </div>
         @endif
 
         <div class="flex flex-wrap gap-3 pt-2">
-            <a href="{{ route('analysis.create') }}" class="btn-primary">Analyse another pull request</a>
+            @can('manage')
+                <a href="{{ route('analysis.create') }}" class="btn-primary">Analyse another pull request</a>
+            @endcan
             <a href="{{ route('analysis.index') }}" class="btn-secondary">View all analyses</a>
         </div>
     </div>

@@ -28,6 +28,7 @@ class RunEvaluation extends Command
         {--limit= : Only evaluate the first N pull requests.}
         {--baseline-only : Run only the keyword baseline. Makes no API calls.}
         {--skip-baseline : Run only the language models.}
+        {--any-repository : Score every PR against the whole registry instead of only its own repository. Not valid for reported results.}
         {--out= : Output CSV path. Defaults to storage/app/evaluation/<timestamp>.csv}';
 
     protected $description = 'Run the model and prompting strategy ablation over the evaluation dataset';
@@ -45,29 +46,54 @@ class RunEvaluation extends Command
             return self::FAILURE;
         }
 
-        $userId = $this->option('user') ?: User::orderBy('id')->value('id');
-        $registry = $registryService->getFormattedForLLM((int) $userId);
-
-        if ($registry === []) {
-            $this->error('The Feature Registry for this user is empty. Populate it before evaluating.');
-
-            return self::FAILURE;
-        }
+        $userId = (int) ($this->option('user') ?: User::orderBy('id')->value('id'));
+        $anyRepository = (bool) $this->option('any-repository');
 
         $conditions = $this->resolveConditions();
         $rows = [];
 
         $this->info(sprintf(
-            'Evaluating %d pull request(s) against %d registry feature(s) under %d condition(s).',
+            'Evaluating %d pull request(s) under %d condition(s), prompt version %d.',
             count($dataset),
-            count($registry),
-            count($conditions)
+            count($conditions),
+            LLMService::PROMPT_VERSION
         ));
+
+        if ($anyRepository) {
+            $this->warn('--any-repository is set: every PR is scored against the whole registry. Do not report these figures.');
+        }
+
         $this->newLine();
 
         foreach ($dataset as $index => $case) {
             $label = $case['pr_url'];
             $this->line(sprintf('[%d/%d] %s', $index + 1, count($dataset), $label));
+
+            // Each pull request is scored only against its own repository's
+            // registry (strict mode, so unscoped demo entries are excluded too).
+            // Scoring a Laravel pull request against Rails features would count
+            // the registry's mismatch as model false positives.
+            $repository = $case['repository'] ?? null;
+
+            if ($repository === null || $repository === '') {
+                try {
+                    $repository = GitHubService::parsePullRequestUrl($case['pr_url'])['repository'];
+                } catch (Throwable $e) {
+                    $this->error('  ' . $e->getMessage());
+                    continue;
+                }
+            }
+
+            $registry = $anyRepository
+                ? $registryService->getFormattedForLLM($userId)
+                : $registryService->getFormattedForLLM($userId, $repository, strict: true);
+
+            if ($registry === []) {
+                $this->error("  no registry entries are scoped to {$repository}; set the Repository field on its features. Skipped.");
+                continue;
+            }
+
+            $this->line(sprintf('  %d registry feature(s) for %s', count($registry), $repository));
 
             // Fetched and preprocessed ONCE per pull request, then reused for
             // every condition. This keeps GitHub requests proportional to the
@@ -114,6 +140,7 @@ class RunEvaluation extends Command
                         'predicted_risk' => '',
                         'expected_risk' => '',
                         'outcome' => 'error',
+                        'confidence' => '',
                         'duration_ms' => '',
                         'prompt_tokens' => '',
                         'completion_tokens' => '',
@@ -171,6 +198,9 @@ class RunEvaluation extends Command
                 'predicted_risk' => $predicted,
                 'expected_risk' => $expected[$feature] ?? '',
                 'outcome' => $outcome,
+                // Kept per prediction so calibration can be checked later: does
+                // a higher stated confidence actually coincide with being right?
+                'confidence' => $risk['confidence'] ?? '',
                 'duration_ms' => $usage['duration_ms'] ?? '',
                 'prompt_tokens' => $usage['prompt_tokens'] ?? '',
                 'completion_tokens' => $usage['completion_tokens'] ?? '',
@@ -189,6 +219,7 @@ class RunEvaluation extends Command
                 'predicted_risk' => '',
                 'expected_risk' => $level,
                 'outcome' => 'false_negative',
+                'confidence' => '',
                 'duration_ms' => $usage['duration_ms'] ?? '',
                 'prompt_tokens' => $usage['prompt_tokens'] ?? '',
                 'completion_tokens' => $usage['completion_tokens'] ?? '',
@@ -206,6 +237,8 @@ class RunEvaluation extends Command
             'repository' => $case['repository'] ?? '',
             'model' => $model,
             'strategy' => $strategy,
+            // Rows from different prompt versions are not comparable.
+            'prompt_version' => LLMService::PROMPT_VERSION,
         ];
     }
 
@@ -277,8 +310,8 @@ class RunEvaluation extends Command
         $handle = fopen($path, 'w');
 
         $columns = [
-            'pr_url', 'repository', 'model', 'strategy', 'feature',
-            'predicted_risk', 'expected_risk', 'outcome',
+            'pr_url', 'repository', 'prompt_version', 'model', 'strategy', 'feature',
+            'predicted_risk', 'expected_risk', 'outcome', 'confidence',
             'duration_ms', 'prompt_tokens', 'completion_tokens', 'reason',
         ];
 
