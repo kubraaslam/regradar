@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Analysis;
+use Barryvdh\DomPDF\Facade\Pdf;
 use App\Services\GitHubService;
 use App\Services\DiffPreprocessor;
 use App\Services\LLMService;
@@ -126,17 +127,59 @@ class AnalysisController extends Controller
 
     public function show(Request $request, Analysis $analysis)
     {
-        // Previously any signed-in QA engineer could open any analysis by
-        // changing the ID in the URL.
+        $this->authorizeView($request, $analysis);
+
+        $analysis->loadMissing('user');
+
+        return view('analysis.show', compact('analysis'));
+    }
+
+    /**
+     * SRS FR11: download the risk report as a PDF.
+     *
+     * Rendered from a dedicated print template rather than the screen view,
+     * because Dompdf supports only a subset of CSS and the interface relies on
+     * flexbox, grid and a dark background that would not print legibly.
+     */
+    public function pdf(Request $request, Analysis $analysis)
+    {
+        $this->authorizeView($request, $analysis);
+
+        abort_unless(
+            $analysis->status === 'completed' && is_array($analysis->results),
+            404,
+            'Only completed analyses can be exported.'
+        );
+
+        $analysis->loadMissing('user');
+
+        return Pdf::loadView('analysis.pdf', [
+            'analysis' => $analysis,
+            'generatedAt' => now(),
+        ])
+            ->setPaper('a4')
+            ->setOption([
+                // Embeds only the glyphs used: roughly 1.1 MB down to tens of KB.
+                'isFontSubsettingEnabled' => true,
+                // Kept off explicitly: the report never needs remote assets, and
+                // allowing them would let report content trigger server requests.
+                'isRemoteEnabled' => false,
+                'isPhpEnabled' => false,
+            ])
+            ->download($analysis->reportFilename());
+    }
+
+    /**
+     * Previously any signed-in QA engineer could open any analysis by changing
+     * the ID in the URL.
+     */
+    protected function authorizeView(Request $request, Analysis $analysis): void
+    {
         abort_unless(
             $request->user()->canViewAll() || $request->user()->owns($analysis),
             403,
             'You do not have access to this analysis.'
         );
-
-        $analysis->loadMissing('user');
-
-        return view('analysis.show', compact('analysis'));
     }
 
     public function index(Request $request)

@@ -29,6 +29,11 @@
                     <x-nav-link :href="route('feature-registry.index')" :active="request()->routeIs('feature-registry.*')">
                         Feature Registry
                     </x-nav-link>
+                    @if (Auth::user()->isAdmin())
+                        <x-nav-link :href="route('admin.users.index')" :active="request()->routeIs('admin.users.*')">
+                            Users
+                        </x-nav-link>
+                    @endif
                 </div>
             </div>
 
@@ -121,6 +126,11 @@
             <x-responsive-nav-link :href="route('feature-registry.index')" :active="request()->routeIs('feature-registry.*')">
                 Feature Registry
             </x-responsive-nav-link>
+            @if (Auth::user()->isAdmin())
+                <x-responsive-nav-link :href="route('admin.users.index')" :active="request()->routeIs('admin.users.*')">
+                    Users
+                </x-responsive-nav-link>
+            @endif
         </div>
 
         {{-- Responsive Settings Options --}}

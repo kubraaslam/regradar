@@ -63,6 +63,18 @@ class RunEvaluation extends Command
             $this->warn('--any-repository is set: every PR is scored against the whole registry. Do not report these figures.');
         }
 
+        // Proposal 5.3: ground truth is labelled manually by the researcher.
+        // Labels proposed by anyone else stay marked until checked.
+        $unverified = count(array_filter($dataset, fn($c) => ($c['label_status'] ?? 'verified') !== 'verified'));
+
+        if ($unverified > 0) {
+            $this->warn(sprintf(
+                '%d of %d ground-truth labels are not yet verified against their issue and fix commit. Do not report these figures.',
+                $unverified,
+                count($dataset)
+            ));
+        }
+
         $this->newLine();
 
         foreach ($dataset as $index => $case) {

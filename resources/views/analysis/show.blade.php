@@ -8,6 +8,17 @@
                     {{ Str::after($analysis->pr_url, 'github.com/') ?: $analysis->pr_url }}
                 </p>
             </div>
+            <div class="flex flex-wrap gap-2">
+            @if ($analysis->status === 'completed' && $analysis->results)
+                {{-- FR11: export the report as a PDF document --}}
+                <a href="{{ route('analysis.pdf', $analysis) }}" class="btn-secondary btn-sm">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.8">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                            d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                    </svg>
+                    Export PDF
+                </a>
+            @endif
             <a href="{{ $analysis->pr_url }}" target="_blank" rel="noopener noreferrer" class="btn-secondary btn-sm">
                 <svg class="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
                     <path
@@ -15,6 +26,7 @@
                 </svg>
                 Open on GitHub
             </a>
+            </div>
         </div>
     </x-slot>
 
@@ -28,11 +40,7 @@
                 $low = $r['total_low'] ?? 0;
                 $total = $high + $medium + $low;
 
-                $verdict = $high > 0
-                    ? ['label' => 'High risk', 'tone' => 'flare', 'level' => 'High', 'copy' => 'Run a full regression pass on the features below before merging.']
-                    : ($medium > 0
-                        ? ['label' => 'Moderate risk', 'tone' => 'amber', 'level' => 'Medium', 'copy' => 'A targeted smoke test over the affected features should be enough.']
-                        : ['label' => 'Low risk', 'tone' => 'brand', 'level' => 'Low', 'copy' => 'Nothing high or medium risk surfaced for this pull request.']);
+                $verdict = $analysis->verdict();
 
                 $verdictTone = [
                     'flare' => 'border-flare-500/30 bg-flare-500/[.07] text-flare-300',

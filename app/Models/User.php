@@ -44,8 +44,60 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'deactivated_at' => 'datetime',
+            'retention_consent_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    /**
+     * Roles an admin may assign, with their display names.
+     */
+    public const ROLES = [
+        self::ROLE_QA_ENGINEER => 'QA Engineer',
+        self::ROLE_DEVELOPER => 'Developer',
+        self::ROLE_ADMIN => 'Admin',
+    ];
+
+    public function analyses()
+    {
+        return $this->hasMany(Analysis::class);
+    }
+
+    public function featureRegistries()
+    {
+        return $this->hasMany(FeatureRegistry::class);
+    }
+
+    public function isActive(): bool
+    {
+        return $this->deactivated_at === null;
+    }
+
+    /**
+     * Whether this user has consented to their analyses being kept beyond the
+     * retention period (SRS NFR8).
+     */
+    public function hasRetentionConsent(): bool
+    {
+        return $this->retention_consent_at !== null;
+    }
+
+    public function roleLabel(): string
+    {
+        return self::ROLES[$this->role] ?? ucfirst((string) $this->role);
+    }
+
+    /**
+     * Whether changing this user's role or deactivating them would leave the
+     * system with no active administrator, after which no one could manage
+     * accounts at all.
+     */
+    public function isLastActiveAdmin(): bool
+    {
+        return $this->isAdmin()
+            && $this->isActive()
+            && static::where('role', self::ROLE_ADMIN)->whereNull('deactivated_at')->count() <= 1;
     }
 
     public const ROLE_QA_ENGINEER = 'qa_engineer';

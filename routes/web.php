@@ -33,13 +33,8 @@ Route::get('/dashboard', function () {
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::patch('/profile/retention', [ProfileController::class, 'updateRetention'])->name('profile.retention');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
-});
-
-Route::get('/test-github', function () {
-    $service = new \App\Services\GitHubService();
-    $diff = $service->fetchDiff('https://github.com/spatie/laravel-permission/pull/2000');
-    return response($diff)->header('Content-Type', 'text/plain');
 });
 
 // Write access: QA engineers and admins run analyses and maintain the registry.
@@ -55,16 +50,15 @@ Route::middleware(['auth', 'role:qa_engineer,admin'])->group(function () {
 Route::middleware(['auth', 'role:qa_engineer,developer,admin'])->group(function () {
     Route::get('/analysis', [AnalysisController::class, 'index'])->name('analysis.index');
     Route::get('/analysis/{analysis}', [AnalysisController::class, 'show'])->whereNumber('analysis')->name('analysis.show');
+    Route::get('/analysis/{analysis}/pdf', [AnalysisController::class, 'pdf'])->whereNumber('analysis')->name('analysis.pdf');
     Route::get('/feature-registry', [FeatureRegistryController::class, 'index'])->name('feature-registry.index');
 });
 
-Route::get('/test-openai', function () {
-    $service = new \App\Services\LLMService();
-    $result = $service->analyseWithZeroShot(
-        "Changed files: AuthController.php\nModified functions: login, logout",
-        [["feature" => "User Auth", "code_areas" => ["AuthController"], "endpoints" => ["/api/login"]]]
-    );
-    return response()->json($result);
+// SRS FR14: account and role management, admins only.
+Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::resource('users', \App\Http\Controllers\Admin\UserController::class)->except(['show', 'destroy']);
+    Route::post('/users/{user}/deactivate', [\App\Http\Controllers\Admin\UserController::class, 'deactivate'])->name('users.deactivate');
+    Route::post('/users/{user}/reactivate', [\App\Http\Controllers\Admin\UserController::class, 'reactivate'])->name('users.reactivate');
 });
 
 require __DIR__ . '/auth.php';

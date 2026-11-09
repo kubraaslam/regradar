@@ -14,6 +14,12 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => \App\Http\Middleware\RoleMiddleware::class,
         ]);
+
+        // Runs on every web request so a deactivated account loses access on
+        // its next page load, not only at its next login.
+        $middleware->web(append: [
+            \App\Http\Middleware\EnsureUserIsActive::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
