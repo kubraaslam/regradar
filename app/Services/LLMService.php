@@ -50,6 +50,21 @@ class LLMService
         self::MODEL_GROQ => 'Qwen 3.8 27B',
     ];
 
+    /**
+     * Identifies the exact prompt text in use, and is written into every
+     * evaluation row.
+     *
+     * Increment it whenever any prompt wording, example, output contract or
+     * registry formatting changes. Results produced under different versions are
+     * not comparable, and must not be pooled in the same analysis.
+     *
+     * 1 - proof of concept, zero-shot only
+     * 2 - three strategies, richer summary and testing_focus
+     * 3 - production and test separation, non-production rule, third example
+     * 4 - per-feature confidence; registry entries ordered by name
+     */
+    public const PROMPT_VERSION = 4;
+
     public const STRATEGY_LABELS = [
         self::STRATEGY_ZERO_SHOT => 'Zero-shot',
         self::STRATEGY_FEW_SHOT => 'Few-shot',
@@ -353,11 +368,13 @@ class LLMService
                 [
                     'feature' => 'Checkout Payment',
                     'risk_level' => 'High',
+                    'confidence' => 95,
                     'reason' => 'PaymentController is a code area for this feature and its capture and refund methods were modified directly.',
                 ],
                 [
                     'feature' => 'Invoice Export',
                     'risk_level' => 'Low',
+                    'confidence' => 60,
                     'reason' => 'CurrencyFormatter is listed under this feature, but it only formats values for display, so a regression is possible although unlikely.',
                 ],
             ],
@@ -379,11 +396,13 @@ class LLMService
                 [
                     'feature' => 'Order Checkout',
                     'risk_level' => 'High',
+                    'confidence' => 95,
                     'reason' => 'OrderService is a code area for this feature and both the place and cancel methods were modified.',
                 ],
                 [
                     'feature' => 'Email Notifications',
                     'risk_level' => 'Medium',
+                    'confidence' => 70,
                     'reason' => 'NotificationService was not changed, but order confirmation emails are dispatched from OrderService, so this feature depends indirectly on the modified code.',
                 ],
             ],
@@ -404,6 +423,7 @@ class LLMService
                 [
                     'feature' => 'Checkout Payment',
                     'risk_level' => 'Low',
+                    'confidence' => 90,
                     'reason' => 'Only the test file covering PaymentController changed. No production code was modified, so the behaviour of the payment flow is unchanged.',
                 ],
             ],
@@ -520,6 +540,7 @@ class LLMService
             {
               "feature": "Feature name here",
               "risk_level": "High",
+              "confidence": 85,
               "reason": "Plain language explanation of why this feature is at risk"
             }
           ],
@@ -535,6 +556,8 @@ class LLMService
         A change confined to test files, documentation or changelog entries does not alter application behaviour. Where a feature is touched only by such files, rate it Low and state in the reason that no production code changed. Never rate a feature High on the strength of a test file alone.
 
         Only include features that have some risk. Omit features with no risk.
+
+        confidence is a whole number from 0 to 100 stating how certain you are that the feature is affected at the risk level you assigned. Use a high value when one of the feature's own code areas changed directly. Use a lower value when the link rests only on a naming similarity, or on a dependency you have inferred rather than one shown in the diff. Confidence describes your certainty about the rating, not the severity of the risk: a test-only change rated Low can carry high confidence.
 
         Write summary as continuous prose, not a list, and do not repeat the reason fields verbatim.
         Give between two and four testing_focus entries, each naming something concrete a tester can carry out.
@@ -583,10 +606,45 @@ class LLMService
         // usable report rather than failing the whole analysis.
         $testingFocus = $decoded['testing_focus'] ?? [];
 
+        $risks = array_values(array_filter($decoded['risks'], 'is_array'));
+
+        foreach ($risks as &$risk) {
+            $risk['confidence'] = $this->normaliseConfidence($risk['confidence'] ?? null);
+        }
+        unset($risk);
+
         return [
-            'risks' => $decoded['risks'],
+            'risks' => $risks,
             'summary' => $decoded['summary'] ?? '',
             'testing_focus' => is_array($testingFocus) ? array_values(array_filter($testingFocus, 'is_string')) : [],
         ];
+    }
+
+    /**
+     * Coerce a reported confidence into a whole number from 0 to 100, or null
+     * when the model gave none.
+     *
+     * Models do not always follow the requested scale: some answer 0.85 rather
+     * than 85, some return a string. A value at or below 1 is read as a
+     * fraction, because a genuine confidence of 1 percent is far less plausible
+     * than a model answering on a 0 to 1 scale.
+     */
+    protected function normaliseConfidence(mixed $value): ?int
+    {
+        if (is_string($value)) {
+            $value = trim(str_replace('%', '', $value));
+        }
+
+        if (!is_numeric($value)) {
+            return null;
+        }
+
+        $value = (float) $value;
+
+        if ($value > 0 && $value <= 1) {
+            $value *= 100;
+        }
+
+        return (int) round(max(0, min(100, $value)));
     }
 }

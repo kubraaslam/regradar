@@ -7,15 +7,21 @@
                     Welcome back, {{ explode(' ', Auth::user()->name)[0] }}
                 </h2>
                 <p class="mt-1 text-sm text-slate-400">
-                    Regression risk across every pull request you have analysed.
+                    @if (Auth::user()->canViewAll())
+                        Regression risk across every pull request your team has analysed.
+                    @else
+                        Regression risk across every pull request you have analysed.
+                    @endif
                 </p>
             </div>
-            <a href="{{ route('analysis.create') }}" class="btn-primary">
-                <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                    <path d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" />
-                </svg>
-                Analyse a pull request
-            </a>
+            @can('manage')
+                <a href="{{ route('analysis.create') }}" class="btn-primary">
+                    <svg class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" />
+                    </svg>
+                    Analyse a pull request
+                </a>
+            @endcan
         </div>
     </x-slot>
 
@@ -133,9 +139,11 @@
                                 Paste a GitHub pull request URL and RegRadar will map the diff onto your feature
                                 registry.
                             </p>
-                            <a href="{{ route('analysis.create') }}" class="btn-primary btn-sm mt-5">
-                                Run your first analysis
-                            </a>
+                            @can('manage')
+                                <a href="{{ route('analysis.create') }}" class="btn-primary btn-sm mt-5">
+                                    Run your first analysis
+                                </a>
+                            @endcan
                         </div>
                     @endforelse
                 </div>
@@ -146,6 +154,7 @@
                 <div class="card card-pad">
                     <h3 class="text-sm font-semibold text-slate-200">Quick actions</h3>
                     <div class="mt-4 space-y-2">
+                        @can('manage')
                         <a href="{{ route('analysis.create') }}"
                             class="flex items-center gap-3 rounded-xl border border-white/[.07] bg-white/[.02] px-3.5 py-3 transition hover:border-brand-500/40 hover:bg-white/[.05]">
                             <span
@@ -160,6 +169,7 @@
                                 <span class="block text-xs text-slate-500">Scan a pull request diff</span>
                             </span>
                         </a>
+                        @endcan
 
                         <a href="{{ route('feature-registry.index') }}"
                             class="flex items-center gap-3 rounded-xl border border-white/[.07] bg-white/[.02] px-3.5 py-3 transition hover:border-brand-500/40 hover:bg-white/[.05]">

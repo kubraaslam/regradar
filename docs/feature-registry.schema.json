@@ -1,0 +1,70 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://github.com/kubraaslam/regradar/docs/feature-registry.schema.json",
+    "title": "RegRadar Feature Registry",
+    "description": "The Feature Registry maps product features to the code that implements them. RegRadar sends the entries that apply to a pull request's repository to the language model alongside the pull request diff, and the model rates each feature's regression risk. QA engineers maintain it through the Feature Registry page; see feature-registry.md.",
+    "type": "array",
+    "items": { "$ref": "#/$defs/entry" },
+    "$defs": {
+        "entry": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["feature_name", "code_areas"],
+            "properties": {
+                "repository": {
+                    "description": "The GitHub repository the feature belongs to, as owner/name. When set, the entry is only used for pull requests from that repository. When null, the entry applies to pull requests from any repository. Stored in lower case.",
+                    "type": ["string", "null"],
+                    "pattern": "^[a-z0-9_.-]+/[a-z0-9_.-]+$",
+                    "maxLength": 255,
+                    "examples": ["laravel/framework", null]
+                },
+                "feature_name": {
+                    "description": "A feature an end user or tester would recognise, in plain language. Sent to the model as \"feature\", and must match the feature names used in the evaluation ground truth exactly.",
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 255,
+                    "examples": ["Form Request Validation"]
+                },
+                "code_areas": {
+                    "description": "Class names, file names or directory names that implement the feature. These are compared with the files and functions changed in a pull request. At least one is required. Prefer names a QA engineer would genuinely know over an exhaustive list of internal classes.",
+                    "type": "array",
+                    "minItems": 1,
+                    "uniqueItems": true,
+                    "items": { "type": "string", "minLength": 1 },
+                    "examples": [["FormRequest", "ValidatesWhenResolved", "Validator", "rules"]]
+                },
+                "endpoints": {
+                    "description": "API routes the feature exposes. Optional, and usually empty for framework repositories.",
+                    "type": "array",
+                    "uniqueItems": true,
+                    "items": { "type": "string", "minLength": 1 },
+                    "default": [],
+                    "examples": [["/api/register", "/api/profile/update", "/api/login"]]
+                },
+                "description": {
+                    "description": "One sentence describing what the feature covers. Sent to the model, so a clear description improves its reasoning about indirect dependencies.",
+                    "type": ["string", "null"],
+                    "examples": ["All form-based request validation using Laravel's validation layer"]
+                }
+            }
+        }
+    },
+    "examples": [
+        [
+            {
+                "repository": "laravel/framework",
+                "feature_name": "Validation Rules",
+                "code_areas": ["Validator", "ValidatesWhenResolved", "FormRequest", "Rules"],
+                "endpoints": [],
+                "description": "Rule parsing and evaluation for form and request validation, including conditional rules"
+            },
+            {
+                "repository": null,
+                "feature_name": "User Authentication",
+                "code_areas": ["AuthController", "LoginRequest", "UserService"],
+                "endpoints": ["/api/auth/login", "/api/auth/logout"],
+                "description": "Handles user login, logout and token generation"
+            }
+        ]
+    ]
+}

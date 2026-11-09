@@ -51,6 +51,8 @@ class KeywordBaselineService
                     // definition a direct overlap, and this baseline has no
                     // mechanism for recognising an indirect dependency.
                     'risk_level' => 'High',
+                    // No confidence: string matching has no basis for estimating one.
+                    'confidence' => null,
                     'reason' => 'Direct textual match on ' . implode(', ', $productionMatches)
                         . ' in the changed production files or functions.',
                 ];
@@ -64,6 +66,7 @@ class KeywordBaselineService
                 $risks[] = [
                     'feature' => $feature['feature'],
                     'risk_level' => 'Low',
+                    'confidence' => null,
                     'reason' => 'Textual match on ' . implode(', ', $testMatches)
                         . ' in changed test files only. No production code changed.',
                 ];

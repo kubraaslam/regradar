@@ -18,9 +18,11 @@
                     <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                         {{ __('Dashboard') }}
                     </x-nav-link>
-                    <x-nav-link :href="route('analysis.create')" :active="request()->routeIs('analysis.create')">
-                        New Analysis
-                    </x-nav-link>
+                    @can('manage')
+                        <x-nav-link :href="route('analysis.create')" :active="request()->routeIs('analysis.create')">
+                            New Analysis
+                        </x-nav-link>
+                    @endcan
                     <x-nav-link :href="route('analysis.index')" :active="request()->routeIs('analysis.index') || request()->routeIs('analysis.show')">
                         History
                     </x-nav-link>
@@ -32,13 +34,19 @@
 
             {{-- Right side --}}
             <div class="hidden sm:ms-6 sm:flex sm:items-center sm:gap-3">
-                <a href="{{ route('analysis.create') }}" class="btn-primary btn-sm">
-                    <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
-                        <path
-                            d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" />
-                    </svg>
-                    New Analysis
-                </a>
+                @can('manage')
+                    <a href="{{ route('analysis.create') }}" class="btn-primary btn-sm">
+                        <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                            <path
+                                d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" />
+                        </svg>
+                        New Analysis
+                    </a>
+                @else
+                    <span class="badge-neutral" title="Developers can view reports but cannot run analyses or edit the registry">
+                        Read-only access
+                    </span>
+                @endcan
 
                 {{-- Settings Dropdown --}}
                 <x-dropdown align="right" width="48">
@@ -102,9 +110,11 @@
             <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                 {{ __('Dashboard') }}
             </x-responsive-nav-link>
-            <x-responsive-nav-link :href="route('analysis.create')" :active="request()->routeIs('analysis.create')">
-                New Analysis
-            </x-responsive-nav-link>
+            @can('manage')
+                <x-responsive-nav-link :href="route('analysis.create')" :active="request()->routeIs('analysis.create')">
+                    New Analysis
+                </x-responsive-nav-link>
+            @endcan
             <x-responsive-nav-link :href="route('analysis.index')" :active="request()->routeIs('analysis.index') || request()->routeIs('analysis.show')">
                 History
             </x-responsive-nav-link>

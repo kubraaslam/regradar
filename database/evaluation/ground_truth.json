@@ -27,7 +27,7 @@
             "note": "Fixes a regression in ExcludeIf by requiring a Closure rather than any callable.",
             "expected": [
                 {
-                    "feature": "Form Request Validation",
+                    "feature": "Validation Rules",
                     "risk_level": "High"
                 }
             ]

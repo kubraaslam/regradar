@@ -29,6 +29,19 @@
         @endif
 
         <div>
+            <label for="repository" class="label">
+                Repository <span class="label-hint">(optional)</span>
+            </label>
+            <input id="repository" type="text" name="repository"
+                value="{{ old('repository', $feature->repository ?? '') }}" placeholder="laravel/framework"
+                class="input font-mono text-[.8rem]" autocomplete="off" />
+            <p class="mt-2 text-xs text-slate-500">
+                The GitHub repository this feature belongs to, as owner/name. Leave blank if the feature applies to
+                pull requests from any repository.
+            </p>
+        </div>
+
+        <div>
             <label for="feature_name" class="label">Feature name</label>
             <input id="feature_name" type="text" name="feature_name"
                 value="{{ old('feature_name', $feature->feature_name ?? '') }}" placeholder="e.g. User Authentication"
