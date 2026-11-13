@@ -103,7 +103,7 @@ class FeatureRegistryScopeTest extends TestCase
             ->from(route('analysis.create'))
             ->post(route('analysis.store'), [
                 'pr_url' => 'https://github.com/laravel/framework/issues/41969',
-                'llm_model' => 'gpt-4o-mini',
+                'llm_model' => 'gpt-6-luna',
                 'prompting_strategy' => 'zero-shot',
             ])
             ->assertRedirect(route('analysis.create'))
@@ -119,7 +119,7 @@ class FeatureRegistryScopeTest extends TestCase
         $this->actingAs($this->qa)
             ->post(route('analysis.store'), [
                 'pr_url' => 'https://github.com/laravel/framework/pull/41969',
-                'llm_model' => 'gpt-4o-mini',
+                'llm_model' => 'gpt-6-luna',
                 'prompting_strategy' => 'zero-shot',
             ])
             ->assertRedirect(route('feature-registry.create'));

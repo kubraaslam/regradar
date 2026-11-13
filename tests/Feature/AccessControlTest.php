@@ -79,7 +79,7 @@ class AccessControlTest extends TestCase
         $this->actingAs($developer)->get(route('analysis.create'))->assertForbidden();
         $this->actingAs($developer)->post(route('analysis.store'), [
             'pr_url' => 'https://github.com/laravel/framework/pull/41969',
-            'llm_model' => 'gpt-4o-mini',
+            'llm_model' => 'gpt-6-luna',
             'prompting_strategy' => 'zero-shot',
         ])->assertForbidden();
 

@@ -17,17 +17,12 @@
 
 <div>
     <label for="role" class="label">Role</label>
-    <select id="role" name="role" class="input" required
-        @disabled($user && $user->is(Auth::user()))>
-        @foreach ($roles as $value => $label)
-            <option value="{{ $value }}" @selected(old('role', $user->role ?? 'qa_engineer') === $value)>{{ $label }}</option>
-        @endforeach
-    </select>
     @if ($user && $user->is(Auth::user()))
-        {{-- A disabled select is not submitted, so send the unchanged role. --}}
-        <input type="hidden" name="role" value="{{ $user->role }}" />
+        {{-- Shown read-only; the hidden input inside still sends the unchanged role. --}}
+        <x-select id="role" name="role" :options="$roles" :selected="$user->role" disabled />
         <p class="mt-2 text-xs text-slate-500">You cannot change your own role.</p>
     @else
+        <x-select id="role" name="role" :options="$roles" :selected="old('role', $user->role ?? 'qa_engineer')" />
         <p class="mt-2 text-xs text-slate-500">
             QA engineers run analyses and maintain the registry. Developers can only view. Admins can also manage users.
         </p>

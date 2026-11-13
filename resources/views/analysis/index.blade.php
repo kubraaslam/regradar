@@ -5,7 +5,11 @@
                 <p class="eyebrow">Archive</p>
                 <h2 class="mt-1 text-2xl font-bold text-slate-100">Analysis history</h2>
                 <p class="mt-1 text-sm text-slate-400">
-                    {{ $analyses->count() }} {{ Str::plural('report', $analyses->count()) }} on record.
+                    @if ($filtered)
+                        Showing {{ $analyses->count() }} of {{ $total }} {{ Str::plural('report', $total) }}.
+                    @else
+                        {{ $total }} {{ Str::plural('report', $total) }} on record.
+                    @endif
                 </p>
             </div>
             @can('manage')
@@ -20,6 +24,53 @@
     </x-slot>
 
     <div class="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8">
+        @if ($total > 0)
+            <form method="GET" action="{{ route('analysis.index') }}" role="search" aria-label="Filter analysis history"
+                x-data @submit.prevent="$store.filters.go($el)"
+                class="card animate-fade-up relative z-20 mb-6 p-4">
+                <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 {{ $options['owners']->isNotEmpty() ? 'lg:grid-cols-6' : 'lg:grid-cols-5' }}">
+                    <div class="col-span-2 sm:col-span-1">
+                        <label for="f-repository" class="filter-label">Repository</label>
+                        <x-select id="f-repository" name="repository" size="sm" submit :selected="$filters['repository']"
+                            :options="['' => 'All'] + $options['repositories']->mapWithKeys(fn($r) => [$r => $r])->all()" />
+                    </div>
+                    <div>
+                        <label for="f-risk" class="filter-label">Highest risk</label>
+                        <x-select id="f-risk" name="risk" size="sm" submit :selected="$filters['risk']"
+                            :options="['' => 'Any', 'High' => 'High', 'Medium' => 'Medium', 'Low' => 'Low', 'none' => 'No findings']" />
+                    </div>
+                    <div>
+                        <label for="f-status" class="filter-label">Status</label>
+                        <x-select id="f-status" name="status" size="sm" submit :selected="$filters['status']"
+                            :options="['' => 'Any', 'completed' => 'Completed', 'failed' => 'Failed', 'in_progress' => 'In progress']" />
+                    </div>
+                    <div>
+                        <label for="f-model" class="filter-label">Model</label>
+                        <x-select id="f-model" name="model" size="sm" submit :selected="$filters['model']"
+                            :options="['' => 'Any'] + \App\Services\LLMService::MODEL_LABELS + \App\Services\LLMService::RETIRED_MODEL_LABELS" />
+                    </div>
+                    <div>
+                        <label for="f-strategy" class="filter-label">Strategy</label>
+                        <x-select id="f-strategy" name="strategy" size="sm" submit :selected="$filters['strategy']"
+                            :options="['' => 'Any'] + \App\Services\LLMService::STRATEGY_LABELS" />
+                    </div>
+                    @if ($options['owners']->isNotEmpty())
+                        <div>
+                            <label for="f-owner" class="filter-label">Run by</label>
+                            <x-select id="f-owner" name="owner" size="sm" submit :selected="$filters['owner']"
+                                :options="['' => 'Anyone'] + $options['owners']->mapWithKeys(fn($u) => [$u->id => $u->name])->all()" />
+                        </div>
+                    @endif
+                </div>
+
+                @if ($filtered)
+                    <div class="mt-3 flex items-center justify-end gap-2">
+                        <a href="{{ route('analysis.index') }}" class="btn-ghost btn-sm">Clear filters</a>
+                    </div>
+                @endif
+            </form>
+        @endif
+
         <div class="card animate-fade-up divide-hairline">
             @forelse ($analyses as $analysis)
                 @php
@@ -53,7 +104,7 @@
                                     @endif
                                     <span class="text-slate-700">·</span>
                                     <span class="font-mono">
-                                        {{ \App\Services\LLMService::MODEL_LABELS[$analysis->llm_model] ?? $analysis->llm_model }}
+                                        {{ \App\Services\LLMService::modelLabel($analysis->llm_model) }}
                                         /
                                         {{ \App\Services\LLMService::STRATEGY_LABELS[$analysis->prompting_strategy] ?? $analysis->prompting_strategy }}
                                     </span>
@@ -88,6 +139,13 @@
                     </div>
                 </div>
             @empty
+                @if ($total > 0)
+                    <div class="px-6 py-16 text-center">
+                        <p class="text-base font-semibold text-slate-200">No reports match these filters</p>
+                        <p class="mt-1.5 text-sm text-slate-500">Try widening a filter, or clear them all.</p>
+                        <a href="{{ route('analysis.index') }}" class="btn-secondary btn-sm mt-5">Clear filters</a>
+                    </div>
+                @else
                 <div class="px-6 py-20 text-center">
                     <x-application-logo class="mx-auto h-14 w-14 opacity-60" />
                     <p class="mt-5 text-base font-semibold text-slate-200">Nothing on the radar yet</p>
@@ -98,6 +156,7 @@
                         <a href="{{ route('analysis.create') }}" class="btn-primary mt-6">Run an analysis</a>
                     @endcan
                 </div>
+                @endif
             @endforelse
         </div>
     </div>

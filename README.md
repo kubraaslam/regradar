@@ -74,7 +74,7 @@ idempotent, so `php artisan db:seed` is safe to run again.
 
 | Model | Provider |
 |---|---|
-| GPT-4o-mini | OpenAI |
+| GPT-6 Luna (reasoning off) | OpenAI |
 | Gemini 3.1 Flash Lite | Google |
 | Qwen 3.8 27B | Groq |
 
@@ -100,7 +100,7 @@ Each pull request is scored only against its own repository's registry. Results
 are written as one row per prediction to `storage/app/evaluation/*.csv`, ready
 for scoring with pandas and scikit-learn.
 
-Useful options: `--limit=3`, `--models=gpt-4o-mini`, `--strategies=few-shot`,
+Useful options: `--limit=3`, `--models=gpt-6-luna`, `--strategies=few-shot`,
 `--skip-baseline`.
 
 ## Data retention (NFR8)

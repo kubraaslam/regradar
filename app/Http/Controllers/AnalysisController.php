@@ -184,11 +184,69 @@ class AnalysisController extends Controller
 
     public function index(Request $request)
     {
-        $analyses = Analysis::visibleTo($request->user())
+        $user = $request->user();
+
+        $all = Analysis::visibleTo($user)
             ->with('user')
             ->orderByDesc('created_at')
             ->get();
 
-        return view('analysis.index', compact('analyses'));
+        $filters = [
+            'repository' => (string) $request->query('repository', ''),
+            'status' => (string) $request->query('status', ''),
+            'risk' => (string) $request->query('risk', ''),
+            'model' => (string) $request->query('model', ''),
+            'strategy' => (string) $request->query('strategy', ''),
+            'owner' => $user->canViewAll() ? (string) $request->query('owner', '') : '',
+        ];
+
+        // History is small enough to filter in memory, which also covers older
+        // analyses whose repository is known only from the pull request URL.
+        $analyses = $all->filter(function (Analysis $a) use ($filters) {
+            if ($filters['repository'] !== '' && $a->repository() !== $filters['repository']) {
+                return false;
+            }
+
+            if ($filters['status'] === 'in_progress') {
+                if (in_array($a->status, ['completed', 'failed'], true)) {
+                    return false;
+                }
+            } elseif ($filters['status'] !== '' && $a->status !== $filters['status']) {
+                return false;
+            }
+
+            if ($filters['risk'] === 'none') {
+                if ($a->status !== 'completed' || $a->highestRisk() !== null) {
+                    return false;
+                }
+            } elseif ($filters['risk'] !== '' && $a->highestRisk() !== $filters['risk']) {
+                return false;
+            }
+
+            if ($filters['model'] !== '' && $a->llm_model !== $filters['model']) {
+                return false;
+            }
+
+            if ($filters['strategy'] !== '' && $a->prompting_strategy !== $filters['strategy']) {
+                return false;
+            }
+
+            return $filters['owner'] === '' || (string) $a->user_id === $filters['owner'];
+        })->values();
+
+        $options = [
+            'repositories' => $all->map->repository()->filter()->unique()->sort()->values(),
+            'owners' => $user->canViewAll()
+                ? $all->pluck('user')->filter()->unique('id')->sortBy('name')->values()
+                : collect(),
+        ];
+
+        return view('analysis.index', [
+            'analyses' => $analyses,
+            'total' => $all->count(),
+            'filters' => $filters,
+            'filtered' => collect($filters)->filter(fn($v) => $v !== '')->isNotEmpty(),
+            'options' => $options,
+        ]);
     }
 }
