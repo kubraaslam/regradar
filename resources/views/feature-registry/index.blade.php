@@ -22,6 +22,56 @@
     @php $canManage = Gate::allows('manage'); @endphp
 
     <div class="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
+        @if ($total > 0)
+            <form method="GET" action="{{ route('feature-registry.index') }}" role="search"
+                x-data @submit.prevent="$store.filters.go($el)"
+                aria-label="Search the feature registry" class="card animate-fade-up relative z-20 mb-6 p-4">
+                <div class="flex flex-col gap-3 lg:flex-row lg:items-end">
+                    <div class="flex-1">
+                        <label for="f-q" class="filter-label">Search</label>
+                        <div class="flex gap-2">
+                            <div class="relative flex-1">
+                                <svg class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500"
+                                    viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                    <path fill-rule="evenodd"
+                                        d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.45 4.39l3.08 3.08a.75.75 0 11-1.06 1.06l-3.08-3.08A7 7 0 012 9z"
+                                        clip-rule="evenodd" />
+                                </svg>
+                                <input id="f-q" type="search" name="q" value="{{ $filters['q'] }}"
+                                    class="input input-sm pl-9"
+                                    placeholder="Feature, description, code area or endpoint">
+                            </div>
+                            <button type="submit" class="btn-primary btn-sm">Search</button>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3 lg:w-auto {{ $options['owners']->isNotEmpty() ? 'lg:grid-cols-2' : 'lg:grid-cols-1' }}">
+                        <div class="{{ $options['owners']->isNotEmpty() ? '' : 'col-span-2 lg:col-span-1' }} lg:w-56">
+                            <label for="f-repository" class="filter-label">Repository</label>
+                            <x-select id="f-repository" name="repository" size="sm" submit :selected="$filters['repository']"
+                                :options="['' => 'All']
+                                    + $options['repositories']->mapWithKeys(fn($r) => [$r => $r])->all()
+                                    + ($options['hasUnscoped'] ? ['__all' => 'Unscoped (all repositories)'] : [])" />
+                        </div>
+                        @if ($options['owners']->isNotEmpty())
+                            <div class="lg:w-44">
+                                <label for="f-owner" class="filter-label">Owner</label>
+                                <x-select id="f-owner" name="owner" size="sm" submit :selected="$filters['owner']"
+                                    :options="['' => 'Anyone'] + $options['owners']->mapWithKeys(fn($u) => [$u->id => $u->name])->all()" />
+                            </div>
+                        @endif
+                    </div>
+                </div>
+
+                @if ($filtered)
+                    <div class="mt-3 flex items-center justify-between gap-2 text-xs text-slate-500">
+                        <span>Showing {{ $features->count() }} of {{ $total }} {{ Str::plural('feature', $total) }}.</span>
+                        <a href="{{ route('feature-registry.index') }}" class="btn-ghost btn-sm">Clear</a>
+                    </div>
+                @endif
+            </form>
+        @endif
+
         <div class="card animate-fade-up overflow-hidden">
             @if ($features->count())
                 <div class="overflow-x-auto">
@@ -112,6 +162,18 @@
                         </tbody>
                     </table>
                 </div>
+            @elseif ($total > 0)
+                <div class="px-6 py-16 text-center">
+                    <p class="text-base font-semibold text-slate-200">No features match</p>
+                    <p class="mt-1.5 text-sm text-slate-500">
+                        @if ($filters['q'] !== '')
+                            Nothing in the registry contains “{{ $filters['q'] }}” with these filters.
+                        @else
+                            Try a different repository or owner.
+                        @endif
+                    </p>
+                    <a href="{{ route('feature-registry.index') }}" class="btn-secondary btn-sm mt-5">Clear search</a>
+                </div>
             @else
                 <div class="px-6 py-20 text-center">
                     <span
@@ -138,9 +200,9 @@
             @endif
         </div>
 
-        @if ($features->count())
+        @if ($features->count() && ! $filtered)
             <p class="mt-4 text-xs text-slate-500">
-                {{ $features->count() }} {{ Str::plural('feature', $features->count()) }} mapped.
+                {{ $total }} {{ Str::plural('feature', $total) }} mapped.
                 The more precise your code areas, the sharper the risk ranking.
             </p>
         @endif

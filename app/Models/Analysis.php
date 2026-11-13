@@ -76,28 +76,57 @@ class Analysis extends Model
      */
     public function reportFilename(): string
     {
-        $owner = $this->repo_owner;
-        $repo = $this->repo_name;
-        $number = $this->pr_number;
-
-        // Analyses created before the repository columns were populated
-        // only carry the pull request URL.
-        if (! ($owner && $repo && $number)
-            && preg_match('#github\.com/([^/]+)/([^/]+)/pull/(\d+)#', (string) $this->pr_url, $m)) {
-            [, $owner, $repo, $number] = $m;
-        }
-
-        if ($owner && $repo && $number) {
-            return sprintf('regradar-%s-%s-pr-%d.pdf', Str::slug($owner), Str::slug($repo), $number);
+        if ($pr = $this->pullRequest()) {
+            return sprintf('regradar-%s-%s-pr-%d.pdf', Str::slug($pr[0]), Str::slug($pr[1]), $pr[2]);
         }
 
         return 'regradar-analysis-' . $this->id . '.pdf';
     }
 
+    /** The repository as owner/name, for example laravel/framework. */
     public function repository(): ?string
     {
-        return $this->repo_owner && $this->repo_name
-            ? $this->repo_owner . '/' . $this->repo_name
-            : null;
+        $pr = $this->pullRequest();
+
+        return $pr ? $pr[0] . '/' . $pr[1] : null;
+    }
+
+    /**
+     * The owner, repository name and pull request number. Analyses created
+     * before the repository columns were populated only carry the pull request
+     * URL, so the URL is parsed when the columns are empty.
+     *
+     * @return array{0: string, 1: string, 2: int}|null
+     */
+    protected function pullRequest(): ?array
+    {
+        if ($this->repo_owner && $this->repo_name && $this->pr_number) {
+            return [$this->repo_owner, $this->repo_name, (int) $this->pr_number];
+        }
+
+        if (preg_match('#github\.com/([^/]+)/([^/]+)/pull/(\d+)#', (string) $this->pr_url, $m)) {
+            return [$m[1], $m[2], (int) $m[3]];
+        }
+
+        return null;
+    }
+
+    /**
+     * The most severe risk level found, or null when the analysis did not
+     * complete or found nothing.
+     */
+    public function highestRisk(): ?string
+    {
+        if ($this->status !== 'completed' || ! is_array($this->results)) {
+            return null;
+        }
+
+        foreach (['High', 'Medium', 'Low'] as $level) {
+            if (($this->results['total_' . strtolower($level)] ?? 0) > 0) {
+                return $level;
+            }
+        }
+
+        return null;
     }
 }

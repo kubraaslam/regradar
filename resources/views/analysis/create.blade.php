@@ -48,24 +48,14 @@
                 <div class="mt-5 grid gap-4 sm:grid-cols-2">
                     <div>
                         <label for="llm_model" class="label">Model</label>
-                        <select id="llm_model" name="llm_model" class="input" required>
-                            @foreach ($models as $value => $label)
-                                <option value="{{ $value }}" @selected(old('llm_model', $defaultModel) === $value)>
-                                    {{ $label }}
-                                </option>
-                            @endforeach
-                        </select>
+                        <x-select id="llm_model" name="llm_model" :options="$models"
+                            :selected="old('llm_model', $defaultModel)" />
                     </div>
 
                     <div>
                         <label for="prompting_strategy" class="label">Prompting strategy</label>
-                        <select id="prompting_strategy" name="prompting_strategy" class="input" required>
-                            @foreach ($strategies as $value => $label)
-                                <option value="{{ $value }}" @selected(old('prompting_strategy', $defaultStrategy) === $value)>
-                                    {{ $label }}
-                                </option>
-                            @endforeach
-                        </select>
+                        <x-select id="prompting_strategy" name="prompting_strategy" :options="$strategies"
+                            :selected="old('prompting_strategy', $defaultStrategy)" />
                     </div>
                 </div>
 

@@ -9,11 +9,12 @@ Everything else is implemented as specified.
 ### FR5: language models
 
 The SRS specifies GPT-4o-mini, Gemini 1.5 Flash and Llama 3 via Groq. Two of the
-three were no longer available when the engine was implemented.
+three were no longer available when the engine was implemented, and the third
+has since been scheduled for shutdown.
 
 | Specified | Implemented | Reason |
 |---|---|---|
-| GPT-4o-mini | `gpt-4o-mini` | Unchanged |
+| GPT-4o-mini | `gpt-6-luna`, reasoning effort `none` | On 14 October 2026 OpenAI announced that `gpt-4o-mini` shuts down on 14 January 2027, and named `gpt-6-luna` as its replacement. It is in the same low-cost tier ($0.10 input and $0.50 output per million tokens, against $0.15 and $0.60). It is a reasoning model, so reasoning is switched off: the other two models answer directly, and leaving reasoning on would make the OpenAI condition a different class of model rather than a different provider. Verified on 14 November 2026: the request returned valid JSON with zero reasoning tokens. Analyses run before the change are labelled GPT-4o-mini. |
 | Gemini 1.5 Flash | `gemini-3.1-flash-lite` | Gemini 1.5 Flash has been withdrawn for new API consumers. Of the Flash models offered, the larger ones returned HTTP 503 "experiencing high demand" on every request when measured on 26 September 2026 (Gemini 3.6 and 3.7 Flash failed 3 of 3, 3.5 Flash 2 of 3), while 3.1 Flash Lite served 3 of 3. It is also the closer tier match to GPT-4o-mini. |
 | Llama 3 via Groq | `qwen/qwen3.8-27b` via Groq | Groq has retired every Llama 3 chat model and retains only Llama safety classifiers. Qwen 3.8 27B preserves the original selection criterion of open-weight accessibility, and keeps the three models in three distinct model families. |
 

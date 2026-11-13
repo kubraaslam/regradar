@@ -14,13 +14,22 @@ class LLMService
      * Pinned to explicit versions rather than moving aliases such as
      * gemini-flash-latest, so that evaluation runs remain reproducible.
      */
-    public const MODEL_OPENAI = 'gpt-4o-mini';
+    /**
+     * Replaces gpt-4o-mini, which OpenAI shuts down on 2027-01-14 and names
+     * gpt-6-luna as the successor. It is a reasoning model; reasoning is
+     * switched off (see OPENAI_REASONING_EFFORT) so that it answers directly,
+     * like the other two models, and the ablation stays like for like.
+     * Verified on 2026-11-14: HTTP 200, JSON output, 0 reasoning tokens.
+     */
+    public const MODEL_OPENAI = 'gpt-6-luna';
+
+    protected const OPENAI_REASONING_EFFORT = 'none';
 
     /**
      * Flash-Lite rather than full Flash. Measured on 2026-09-26, the larger
      * Gemini flash models returned HTTP 503 "experiencing high demand" on every
      * attempt (3.6 and 3.7 at 0/3, 3.5 at 1/3), while Flash-Lite served 3/3 at
-     * around 4 seconds. It is also the closer tier match to GPT-4o-mini.
+     * around 4 seconds. It is also the closer tier match to the OpenAI model.
      * Re-verify availability before starting an evaluation run.
      */
     public const MODEL_GEMINI = 'gemini-3.1-flash-lite';
@@ -45,10 +54,24 @@ class LLMService
 
     /** Display names for the submission form and the risk report. */
     public const MODEL_LABELS = [
-        self::MODEL_OPENAI => 'GPT-4o-mini',
+        self::MODEL_OPENAI => 'GPT-6 Luna',
         self::MODEL_GEMINI => 'Gemini 3.1 Flash Lite',
         self::MODEL_GROQ => 'Qwen 3.8 27B',
     ];
+
+    /**
+     * Models no longer offered for new analyses, kept so that reports
+     * produced with them still show a readable name and can be filtered.
+     */
+    public const RETIRED_MODEL_LABELS = [
+        'gpt-4o-mini' => 'GPT-4o-mini',
+    ];
+
+    /** Display name for any model an analysis may have been run with. */
+    public static function modelLabel(?string $model): string
+    {
+        return self::MODEL_LABELS[$model] ?? self::RETIRED_MODEL_LABELS[$model] ?? (string) $model;
+    }
 
     /**
      * Identifies the exact prompt text in use, and is written into every
@@ -198,6 +221,7 @@ class LLMService
                     ['role' => 'user', 'content' => $this->buildPrompt($strategy, $diffSummary, $registry)],
                 ],
                 'temperature' => self::TEMPERATURE,
+                'reasoning_effort' => self::OPENAI_REASONING_EFFORT,
                 'response_format' => ['type' => 'json_object'],
             ]
         );

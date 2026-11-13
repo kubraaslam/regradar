@@ -76,7 +76,7 @@
                         @endif
                         <p class="mt-2">
                             <span class="badge-neutral font-mono">
-                                {{ \App\Services\LLMService::MODEL_LABELS[$analysis->llm_model] ?? $analysis->llm_model }}
+                                {{ \App\Services\LLMService::modelLabel($analysis->llm_model) }}
                                 <span class="text-slate-600">·</span>
                                 {{ \App\Services\LLMService::STRATEGY_LABELS[$analysis->prompting_strategy] ?? $analysis->prompting_strategy }}
                             </span>

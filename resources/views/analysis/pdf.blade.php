@@ -17,7 +17,7 @@
     ];
     $v = $tone[$verdict['level']];
 
-    $model = LLMService::MODEL_LABELS[$analysis->llm_model] ?? $analysis->llm_model;
+    $model = LLMService::modelLabel($analysis->llm_model);
     $strategy = LLMService::STRATEGY_LABELS[$analysis->prompting_strategy] ?? $analysis->prompting_strategy;
     $hasConfidence = collect($r['risks'] ?? [])->contains(fn($x) => isset($x['confidence']));
 @endphp
